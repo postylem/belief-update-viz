@@ -1,4 +1,5 @@
 <script>
+  import { untrack } from 'svelte';
   import { computeAll, normalize } from './lib/math.js';
   import { uniform, uniformLikelihood } from './lib/presets.js';
   import { priorColor, likelihoodColor, posteriorColor } from './lib/colors.js';
@@ -47,14 +48,18 @@
   // Handle support size change
   $effect(() => {
     const n = supportSize;
-    const currentN = prior.length;
+    // Use untrack to read arrays without subscribing (only supportSize triggers this)
+    const currentPrior = untrack(() => prior);
+    const currentLikelihood = untrack(() => likelihood);
+    const currentLabels = untrack(() => labels);
+    const currentN = currentPrior.length;
 
     if (n !== currentN) {
       if (n > currentN) {
         // Add new states
-        const newPrior = [...prior];
-        const newLikelihood = [...likelihood];
-        const newLabels = [...labels];
+        const newPrior = [...currentPrior];
+        const newLikelihood = [...currentLikelihood];
+        const newLabels = [...currentLabels];
         for (let i = currentN; i < n; i++) {
           newPrior.push(1 / n);
           newLikelihood.push(0.5);
@@ -65,9 +70,9 @@
         labels = newLabels;
       } else {
         // Remove states
-        prior = normalize(prior.slice(0, n)) || uniform(n);
-        likelihood = likelihood.slice(0, n);
-        labels = labels.slice(0, n);
+        prior = normalize(currentPrior.slice(0, n)) || uniform(n);
+        likelihood = currentLikelihood.slice(0, n);
+        labels = currentLabels.slice(0, n);
       }
     }
   });
@@ -107,9 +112,13 @@
   // Enforce min values when allowZeroes changes
   $effect(() => {
     if (!allowZeroes) {
-      prior = prior.map(v => Math.max(v, epsilon));
-      prior = normalize(prior);
-      likelihood = likelihood.map(v => Math.max(v, epsilon));
+      // Use untrack to read values without subscribing (prevents infinite loop)
+      const currentPrior = untrack(() => prior);
+      const currentLikelihood = untrack(() => likelihood);
+      const eps = untrack(() => epsilon);
+
+      prior = normalize(currentPrior.map(v => Math.max(v, eps)));
+      likelihood = currentLikelihood.map(v => Math.max(v, eps));
     }
   });
 </script>
