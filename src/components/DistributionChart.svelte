@@ -1,11 +1,13 @@
 <script>
   import { onMount } from 'svelte';
   import * as d3 from 'd3';
+  import katex from 'katex';
   import { clamp, formatNumber } from '../lib/math.js';
 
   // Props
   let {
     title = '',
+    titleTex = '',  // LaTeX version of title
     values = $bindable([]),
     labels = [],
     editable = false,
@@ -162,12 +164,26 @@
 
     return () => resizeObserver.disconnect();
   });
+
+  // Render title with KaTeX if titleTex provided
+  let titleEl = $state(null);
+  $effect(() => {
+    if (titleEl && titleTex) {
+      katex.render(titleTex, titleEl, { throwOnError: false, trust: true });
+    }
+  });
 </script>
 
 <svelte:window onmousemove={onMouseMove} onmouseup={endDrag} />
 
 <div class="distribution-chart" bind:this={container}>
-  <h3>{title}</h3>
+  <h3>
+    {#if titleTex}
+      <span bind:this={titleEl}></span>
+    {:else}
+      {title}
+    {/if}
+  </h3>
   <svg
     width={width}
     height={chartHeight + margin.top + margin.bottom}
@@ -315,7 +331,7 @@
   }
 
   .bar {
-    transition: fill 0.15s ease;
+    /* no transition - instant updates */
   }
 
   .bar.dragging {

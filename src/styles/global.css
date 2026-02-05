@@ -77,12 +77,7 @@ button:focus {
   outline-offset: 1px;
 }
 
-/* Transitions */
-* {
-  transition-property: background-color, border-color, color, fill, stroke, opacity, box-shadow, transform;
-  transition-duration: 0.15s;
-  transition-timing-function: ease;
-}
+/* No global transitions - instant updates */
 
 /* KaTeX overrides for dark theme */
 .katex {

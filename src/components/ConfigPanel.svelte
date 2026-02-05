@@ -89,7 +89,7 @@
 
   .arrow {
     font-size: 0.7rem;
-    transition: transform 0.2s ease;
+    transition: transform 0.15s ease;
   }
 
   .panel-content {

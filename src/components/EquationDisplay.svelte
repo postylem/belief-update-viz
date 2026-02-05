@@ -13,13 +13,13 @@
   let equationContainer;
   let valuesContainer;
 
-  // Render the main equation
+  // Render the main equation: surprisal = KL + R
   const mainEquation = String.raw`
-    \underbrace{\color{#9966cc}D_{\mathrm{KL}}(p_{Z|u} \,\|\, p_Z)}_{\text{KL divergence}}
+    \underbrace{-\log \mathbb{E}_{p_Z}[p(u \mid Z)]}_{\mathrm{surprisal}(u)}
     \;=\;
-    \underbrace{-\log \mathbb{E}_{p_Z}[p(u|z)]}_{\text{surprisal}(u)}
-    \;-\;
-    \underbrace{\color{#33aaaa}\mathbb{E}_{p_{Z|u}}[-\log p(u|z)]}_{\text{R}(u)}
+    \underbrace{\color{#9966cc}D_{\mathrm{KL}}\bigl(p_{Z \mid u} \,\|\, p_Z\bigr)}_{\color{#9966cc}D_{\mathrm{KL}}}
+    \;+\;
+    \underbrace{\color{#33aaaa}\mathbb{E}_{p_{Z \mid u}}\bigl[-\log p(u \mid Z)\bigr]}_{\color{#33aaaa}R(u)}
   `;
 
   function formatVal(v) {
@@ -41,10 +41,10 @@
   $effect(() => {
     if (valuesContainer) {
       const valuesEquation = String.raw`
-        \color{#9966cc}${formatVal(kl)}
-        \;=\;
         ${formatVal(surprisal)}
-        \;-\;
+        \;=\;
+        \color{#9966cc}${formatVal(kl)}
+        \;+\;
         \color{#33aaaa}${formatVal(r)}
         \quad \text{${unit}}
       `;

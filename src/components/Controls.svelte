@@ -224,7 +224,7 @@
     padding: 0.4rem 1rem;
     font-size: 0.85rem;
     cursor: pointer;
-    transition: all 0.15s ease;
+    transition: background-color 0.15s ease, border-color 0.15s ease;
   }
 
   .reset-btn:hover {

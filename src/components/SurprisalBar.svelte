@@ -1,4 +1,5 @@
 <script>
+  import katex from 'katex';
   import { formatNumber } from '../lib/math.js';
   import { KL_COLOR, R_COLOR } from '../lib/colors.js';
 
@@ -8,6 +9,8 @@
     r = 0,
     unit = 'bits',
   } = $props();
+
+  let equationEl;
 
   // Compute widths as percentages
   let klPercent = $derived(
@@ -28,14 +31,28 @@
     Number.isFinite(kl) &&
     Number.isFinite(r)
   );
+
+  // Render equation with KaTeX
+  $effect(() => {
+    if (equationEl) {
+      katex.render(
+        String.raw`\mathrm{surprisal}(u) = {\color{#9966cc}D_{\mathrm{KL}}} + {\color{#33aaaa}R}`,
+        equationEl,
+        { throwOnError: false, trust: true }
+      );
+    }
+  });
+
+  // Helper to render inline KaTeX
+  function tex(str) {
+    return katex.renderToString(str, { throwOnError: false, trust: true });
+  }
 </script>
 
 <div class="surprisal-bar">
   <div class="header">
     <span class="title">Surprisal Decomposition</span>
-    <span class="equation">
-      surprisal(u) = KL + R
-    </span>
+    <span class="equation" bind:this={equationEl}></span>
   </div>
 
   {#if isValid}
@@ -45,7 +62,8 @@
         style="width: {klPercent}%; background-color: {KL_COLOR};"
       >
         {#if klPercent > 15}
-          <span class="segment-label">KL</span>
+          <!-- eslint-disable-next-line svelte/no-at-html-tags -->
+          <span class="segment-label">{@html tex(String.raw`D_{\mathrm{KL}}`)}</span>
         {/if}
       </div>
       <div
@@ -53,24 +71,28 @@
         style="width: {rPercent}%; background-color: {R_COLOR};"
       >
         {#if rPercent > 15}
-          <span class="segment-label">R</span>
+          <!-- eslint-disable-next-line svelte/no-at-html-tags -->
+          <span class="segment-label">{@html tex('R')}</span>
         {/if}
       </div>
     </div>
 
     <div class="values">
       <div class="value-item">
-        <span class="value-label">Surprisal:</span>
+        <!-- eslint-disable-next-line svelte/no-at-html-tags -->
+        <span class="value-label">{@html tex(String.raw`\mathrm{surprisal}(u)`)}: </span>
         <span class="value-number">{surprisalStr} {unit}</span>
       </div>
       <div class="value-item">
         <span class="value-dot" style="background-color: {KL_COLOR};"></span>
-        <span class="value-label">KL(post‖prior):</span>
+        <!-- eslint-disable-next-line svelte/no-at-html-tags -->
+        <span class="value-label">{@html tex(String.raw`{\color{#9966cc}D_{\mathrm{KL}}(p_{Z|u} \| p_Z)}`)}: </span>
         <span class="value-number">{klStr} {unit}</span>
       </div>
       <div class="value-item">
         <span class="value-dot" style="background-color: {R_COLOR};"></span>
-        <span class="value-label">R(u):</span>
+        <!-- eslint-disable-next-line svelte/no-at-html-tags -->
+        <span class="value-label">{@html tex(String.raw`{\color{#33aaaa}R(u)}`)}: </span>
         <span class="value-number">{rStr} {unit}</span>
       </div>
     </div>
@@ -108,10 +130,12 @@
   }
 
   .equation {
-    font-size: 0.8rem;
+    font-size: 0.85rem;
     color: rgba(255, 255, 255, 0.6);
-    font-family: 'Times New Roman', serif;
-    font-style: italic;
+  }
+
+  .equation :global(.katex) {
+    color: rgba(255, 255, 255, 0.7);
   }
 
   .bar-container {
@@ -126,15 +150,18 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: width 0.3s ease;
     min-width: 2px;
   }
 
   .segment-label {
-    font-size: 0.75rem;
+    font-size: 0.7rem;
     font-weight: 600;
     color: white;
     text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+  }
+
+  .segment-label :global(.katex) {
+    color: white;
   }
 
   .values {

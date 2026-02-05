@@ -1,5 +1,6 @@
 <script>
   import { untrack } from 'svelte';
+  import katex from 'katex';
   import { computeAll, normalize } from './lib/math.js';
   import { uniform, uniformLikelihood } from './lib/presets.js';
   import { priorColor, likelihoodColor, posteriorColor } from './lib/colors.js';
@@ -9,6 +10,11 @@
   import EquationDisplay from './components/EquationDisplay.svelte';
   import Controls from './components/Controls.svelte';
   import ConfigPanel from './components/ConfigPanel.svelte';
+
+  // Helper to render inline KaTeX
+  function tex(str) {
+    return katex.renderToString(str, { throwOnError: false, trust: true });
+  }
 
   // Core state
   let supportSize = $state(4);
@@ -139,12 +145,14 @@
   <div class="charts-container">
     {#if priorUndefined}
       <div class="chart-placeholder">
-        <h3>Prior p(z)</h3>
+        <!-- eslint-disable-next-line svelte/no-at-html-tags -->
+        <h3>{@html tex(String.raw`\text{Prior } p(Z)`)}</h3>
         <div class="undefined-message">Prior undefined (all values are zero)</div>
       </div>
     {:else}
       <DistributionChart
-        title="Prior p(z)"
+        title="Prior"
+        titleTex={String.raw`\text{Prior } p(Z)`}
         bind:values={prior}
         {labels}
         editable={true}
@@ -157,7 +165,8 @@
     {/if}
 
     <DistributionChart
-      title="Likelihood p(u|z)"
+      title="Likelihood"
+      titleTex={String.raw`\text{Likelihood } p(u \mid Z)`}
       bind:values={likelihood}
       {labels}
       editable={true}
@@ -170,7 +179,8 @@
 
     {#if posteriorUndefined}
       <div class="chart-placeholder">
-        <h3>Posterior p(z|u)</h3>
+        <!-- eslint-disable-next-line svelte/no-at-html-tags -->
+        <h3>{@html tex(String.raw`\text{Posterior } p(Z \mid u)`)}</h3>
         <div class="undefined-message">
           Posterior undefined
           {#if priorUndefined}
@@ -182,7 +192,8 @@
       </div>
     {:else}
       <DistributionChart
-        title="Posterior p(z|u)"
+        title="Posterior"
+        titleTex={String.raw`\text{Posterior } p(Z \mid u)`}
         values={posterior}
         {labels}
         editable={false}
