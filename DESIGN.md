@@ -147,6 +147,6 @@ When "Allow zeroes" is ON:
 
 - **Horizontal bars**: Probability on x-axis, states on y-axis — reads naturally
 - **Instant updates**: No CSS transitions on data changes for responsive feel
-- **Dark theme**: Reduces eye strain, good contrast for colored bars
+- **Dark theme option**: Reduces eye strain, good contrast for colored bars, but also works in light theme.
 - **KaTeX everywhere**: Consistent mathematical typography
 - **Functional style**: Pure computation functions, array methods over loops

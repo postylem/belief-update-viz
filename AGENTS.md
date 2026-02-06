@@ -90,3 +90,15 @@ Commit early and often with informative messages. Each commit should represent a
 - `WIP`
 - `fix`
 - `updates`
+
+## Documentation
+
+Keep `DESIGN.md` up to date as you make changes. It serves as the comprehensive design document for this project, covering:
+
+- Mathematical foundation and formulas
+- Feature descriptions and user interactions
+- Architecture and project structure
+- Color schemes and visual design decisions
+- Edge case handling
+
+When adding new features or modifying existing behavior, update the relevant sections in DESIGN.md to reflect the current state of the implementation.
