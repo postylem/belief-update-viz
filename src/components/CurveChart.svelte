@@ -13,6 +13,7 @@
     editable = false,
     colorFn = () => '#888',
     yMax = $bindable(null),
+    maxDragY = Infinity,
     domain = [0, 1],
     onchange = null,
   } = $props();
@@ -45,6 +46,17 @@
     controlPointYs.map((_, i) =>
       domain[0] + (i / (controlPointYs.length - 1)) * (domain[1] - domain[0])
     )
+  );
+
+  // Display y-values: sample gridValues at control point positions so dots sit on the curve
+  // (handles normalization mismatch, e.g. prior density must integrate to 1)
+  let controlPointDisplayYs = $derived(
+    controlPointYs.map((cy, i) => {
+      if (gridValues.length === 0) return cy;
+      const t = i / Math.max(1, controlPointYs.length - 1);
+      const gridIdx = Math.round(t * (gridValues.length - 1));
+      return gridValues[gridIdx] ?? cy;
+    })
   );
 
   // Generate area path from grid
@@ -96,28 +108,88 @@
   // Drag state
   let dragging = $state(false);
   let dragIndex = $state(-1);
+  let influenceSigma = $state(0);    // 0 = single point, >0 = Gaussian width in index-space
+  let dragInitialYs = $state([]);    // snapshot at drag start
+  let dragStartVal = $state(0);      // mouse y-value at drag start (for relative delta)
+  let svgEl = $state(null);
 
-  function startDrag(index, event) {
-    if (!editable) return;
+  const SINGLE_POINT_THRESHOLD = 7;  // pixels: within this = directly on point
+
+  function handleChartPointerDown(event) {
+    if (!editable || controlPointYs.length === 0) return;
+
+    const svgRect = svgEl.getBoundingClientRect();
+    const mouseX = event.clientX - svgRect.left - margin.left;
+    const mouseY = event.clientY - svgRect.top - margin.top;
+
+    // Ignore clicks outside chart area
+    if (mouseX < 0 || mouseX > chartWidth || mouseY < 0 || mouseY > chartHeight + 5) return;
+
     event.preventDefault();
+
+    // Find nearest control point by x-coordinate
+    let nearestIdx = 0;
+    let minDist = Infinity;
+    controlPointXs.forEach((cx, i) => {
+      const dist = Math.abs(mouseX - xScale(cx));
+      if (dist < minDist) {
+        minDist = dist;
+        nearestIdx = i;
+      }
+    });
+
     dragging = true;
-    dragIndex = index;
+    dragIndex = nearestIdx;
+    dragInitialYs = [...controlPointYs];
+    dragStartVal = Math.max(0, yScale.invert(mouseY));
+
+    // Vertical pixel distance from the displayed control point center
+    const pointPixelY = yScale(Math.max(0, controlPointDisplayYs[nearestIdx]));
+    const yOffset = Math.abs(mouseY - pointPixelY);
+
+    if (yOffset < SINGLE_POINT_THRESHOLD) {
+      influenceSigma = 0; // single point
+    } else {
+      // Convert pixel offset to index-space sigma via point density
+      const pixelsPerPoint = chartWidth / Math.max(1, controlPointYs.length - 1);
+      influenceSigma = (yOffset - SINGLE_POINT_THRESHOLD) / pixelsPerPoint * 0.8;
+    }
   }
 
   function onPointerMove(event) {
-    if (!dragging || dragIndex < 0 || !container) return;
-    const rect = container.getBoundingClientRect();
-    const y = event.clientY - rect.top - margin.top;
-    const newVal = Math.max(0, yScale.invert(y));
-    const newYs = [...controlPointYs];
-    newYs[dragIndex] = newVal;
-    controlPointYs = newYs;
+    if (!dragging || dragIndex < 0 || !svgEl) return;
+
+    const svgRect = svgEl.getBoundingClientRect();
+    const mouseY = event.clientY - svgRect.top - margin.top;
+    const newCenterVal = clamp(yScale.invert(mouseY), 0, maxDragY);
+
+    if (influenceSigma === 0) {
+      // Single point drag
+      const newYs = [...controlPointYs];
+      newYs[dragIndex] = newCenterVal;
+      controlPointYs = newYs;
+    } else {
+      // Multi-point drag with Gaussian falloff — delta relative to drag start, not point
+      const delta = newCenterVal - dragStartVal;
+      const twoSigmaSq = 2 * influenceSigma * influenceSigma;
+      controlPointYs = dragInitialYs.map((y, i) => {
+        const d = Math.abs(i - dragIndex);
+        if (d === 0) return clamp(y + delta, 0, maxDragY);
+        const weight = Math.exp(-(d * d) / twoSigmaSq);
+        if (weight < 0.001) return y; // skip negligible influence
+        return clamp(y + delta * weight, 0, maxDragY);
+      });
+    }
+
     onchange?.();
   }
 
   function endDrag() {
     dragging = false;
     dragIndex = -1;
+    influenceSigma = 0;
+    dragInitialYs = [];
+    dragStartVal = 0;
   }
 
   // Resize observer
@@ -156,10 +228,13 @@
       {title}
     {/if}
   </h3>
+  <!-- svelte-ignore a11y_no_static_element_interactions -->
   <svg
+    bind:this={svgEl}
     {width}
     {height}
     class:editable
+    onpointerdown={handleChartPointerDown}
   >
     <g transform="translate({margin.left}, {margin.top})">
       <!-- Y-axis grid lines -->
@@ -199,18 +274,17 @@
 
       <!-- Control points -->
       {#if editable}
-        {#each controlPointYs as cy, i}
-          <!-- svelte-ignore a11y_no_static_element_interactions -->
-          <circle
+        {#each controlPointDisplayYs as cy, i}
+            <circle
             cx={xScale(controlPointXs[i])}
             cy={yScale(Math.max(0, cy))}
-            r={dragging && dragIndex === i ? 7 : 5}
+            r={dragging && dragIndex === i && influenceSigma === 0 ? 7 : Math.max(2.5, 6 - controlPointYs.length / 15)}
             class="control-point"
-            class:active={dragging && dragIndex === i}
+            class:active={dragging && dragIndex === i && influenceSigma === 0}
             fill={strokeColor}
+            fill-opacity="0.7"
             stroke="var(--bg-primary)"
-            stroke-width="2"
-            onpointerdown={(e) => startDrag(i, e)}
+            stroke-width="1.5"
           />
         {/each}
       {/if}

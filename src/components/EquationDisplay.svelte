@@ -1,5 +1,4 @@
 <script>
-  import { onMount } from 'svelte';
   import katex from 'katex';
   import 'katex/dist/katex.min.css';
 
@@ -10,17 +9,11 @@
     unit = 'bits',
   } = $props();
 
-  let equationContainer;
-  let valuesContainer;
+  let container;
 
-  // Render the main equation: surprisal = KL + R
-  const mainEquation = String.raw`
-    \underbrace{-\log \mathbb{E}_{p_Z}[p(u \mid Z)]}_{\mathrm{surprisal}(u)}
-    \;=\;
-    \underbrace{\color{#45a085}D_{\mathrm{KL}}\bigl(p_{Z \mid u} \,\|\, p_Z\bigr)}_{\color{#45a085}D_{\mathrm{KL}}}
-    \;+\;
-    \underbrace{\color{#e87040}\mathbb{E}_{p_{Z \mid u}}\bigl[-\log p(u \mid Z)\bigr]}_{\color{#e87040}R(u)}
-  `;
+  function tex(str) {
+    return katex.renderToString(str, { throwOnError: false, trust: true });
+  }
 
   function formatVal(v) {
     if (!Number.isFinite(v)) return '\\text{undefined}';
@@ -29,26 +22,23 @@
   }
 
   $effect(() => {
-    if (equationContainer) {
-      katex.render(mainEquation, equationContainer, {
-        displayMode: true,
-        throwOnError: false,
-        trust: true,
-      });
-    }
-  });
-
-  $effect(() => {
-    if (valuesContainer) {
-      const valuesEquation = String.raw`
-        ${formatVal(surprisal)}
-        \;=\;
-        \color{#45a085}${formatVal(kl)}
+    if (container) {
+      const equation = String.raw`
+        \begin{aligned}
+        \underbrace{-\log \mathbb{E}_{p_Z}[\operatorname{lik}_u(Z)]}_{\mathrm{surprisal}(u)}
+        &\;=\;
+        \underbrace{\color{#45a085}D_{\mathrm{KL}}\bigl(p_{Z \mid u} \,\|\, p_Z\bigr)}_{\color{#45a085}\text{update size}}
         \;+\;
-        \color{#e87040}${formatVal(r)}
-        \quad \text{${unit}}
+        \underbrace{\color{#e87040}\mathbb{E}_{p_{Z \mid u}}\bigl[-\log \operatorname{lik}_u(Z)\bigr]}_{\color{#e87040}R(u)}
+        \\[12pt]
+        ${formatVal(surprisal)} \text{ ${unit}}
+        &\;=\;
+        {\color{#45a085}${formatVal(kl)}} \text{ ${unit}}
+        \;+\;
+        {\color{#e87040}${formatVal(r)}} \text{ ${unit}}
+        \end{aligned}
       `;
-      katex.render(valuesEquation, valuesContainer, {
+      katex.render(equation, container, {
         displayMode: true,
         throwOnError: false,
         trust: true,
@@ -57,27 +47,23 @@
   });
 </script>
 
-<div class="equation-display">
-  <div class="equation-main" bind:this={equationContainer}></div>
-  <div class="equation-values" bind:this={valuesContainer}></div>
-</div>
+<!-- eslint-disable-next-line svelte/no-at-html-tags -->
+<p class="equation-description">
+  <strong>Setting:</strong>
+  Beliefs about latent {@html tex('Z')} change upon observation {@html tex('u')} from a prior {@html tex('p_Z')} to posterior {@html tex('p_{Z \\mid u}')}.
+  The the raw Shannon information {@html tex('u')} carries (its surprisal) decomposes into the size of the belief update ({@html tex(String.raw`{\color{#45a085}D_{\mathrm{KL}}}`)}) plus the remaining expected surprisal of {@html tex('u')} under the updated beliefs (reconstruction information, {@html tex(String.raw`{\color{#e87040}R}`)}).</p>
+<div class="equation-display" bind:this={container}></div>
 
 <style>
+  .equation-description {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    line-height: 1.5;
+    margin: 0 0 1rem 0;
+  }
+
   .equation-display {
-    background: var(--bg-surface);
-    border-radius: 8px;
-    padding: 1.5rem;
-    margin-top: 1.5rem;
     overflow-x: auto;
-  }
-
-  .equation-main {
-    margin-bottom: 1rem;
-  }
-
-  .equation-values {
-    padding-top: 0.5rem;
-    border-top: 1px solid var(--border-subtle);
   }
 
   :global(.equation-display .katex) {

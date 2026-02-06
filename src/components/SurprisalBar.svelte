@@ -11,8 +11,6 @@
     axisMax = $bindable(6),
   } = $props();
 
-  let equationEl;
-
   // Tooltip state
   let tooltipVisible = $state(false);
   let tooltipContent = $state(null);
@@ -23,14 +21,7 @@
   // Effective axis maximum: at least the surprisal value
   let effectiveMax = $derived(Math.max(axisMax, surprisal));
 
-  // Compute bar width as percentage of axis
-  let barWidthPercent = $derived(
-    effectiveMax > 0 && Number.isFinite(surprisal)
-      ? (surprisal / effectiveMax) * 100
-      : 0
-  );
-
-  // Compute KL and R widths relative to the bar (not the full axis)
+  // Compute KL and R widths as percentage of axis
   let klWidthPercent = $derived(
     surprisal > 0 && Number.isFinite(surprisal)
       ? (kl / effectiveMax) * 100
@@ -48,7 +39,6 @@
     const magnitude = Math.pow(10, Math.floor(Math.log10(roughStep)));
     const residual = roughStep / magnitude;
 
-    // Round to 1, 2, 5, or 10
     let niceResidual;
     if (residual <= 1.5) niceResidual = 1;
     else if (residual <= 3) niceResidual = 2;
@@ -63,7 +53,6 @@
     const step = niceStep(effectiveMax);
     const tickValues = [];
 
-    // Start at 0, go up by step until we exceed effectiveMax
     for (let v = 0; v <= effectiveMax + step * 0.001; v += step) {
       tickValues.push({
         value: v,
@@ -75,7 +64,6 @@
   });
 
   // Format for display
-  let surprisalStr = $derived(formatNumber(surprisal, 4));
   let klStr = $derived(formatNumber(kl, 4));
   let rStr = $derived(formatNumber(r, 4));
 
@@ -85,24 +73,6 @@
     Number.isFinite(kl) &&
     Number.isFinite(r)
   );
-
-  // Render equation with KaTeX
-  $effect(() => {
-    if (equationEl) {
-      katex.render(
-        String.raw`\mathrm{surprisal}(u) = {\color{#45a085}D_{\mathrm{KL}}} + {\color{#e87040}R}`,
-        equationEl,
-        { throwOnError: false, trust: true }
-      );
-    }
-  });
-
-  // Render tooltip content with KaTeX
-  $effect(() => {
-    if (tooltipEl && tooltipContent) {
-      katex.render(tooltipContent, tooltipEl, { throwOnError: false, trust: true });
-    }
-  });
 
   // Helper to render inline KaTeX
   function tex(str) {
@@ -116,6 +86,13 @@
     if (val >= 1) return val.toFixed(1);
     return val.toFixed(2);
   }
+
+  // Render tooltip content with KaTeX
+  $effect(() => {
+    if (tooltipEl && tooltipContent) {
+      katex.render(tooltipContent, tooltipEl, { throwOnError: false, trust: true });
+    }
+  });
 
   // Tooltip handlers
   function showTooltip(type, event) {
@@ -138,8 +115,7 @@
 
 <div class="surprisal-bar">
   <div class="header">
-    <span class="title">Surprisal Decomposition</span>
-    <span class="equation" bind:this={equationEl}></span>
+    <span class="title">Surprisal decomposition</span>
   </div>
 
   {#if isValid}
@@ -180,26 +156,6 @@
       </div>
       <div class="axis-label">{unit}</div>
     </div>
-
-    <div class="values">
-      <div class="value-item">
-        <!-- eslint-disable-next-line svelte/no-at-html-tags -->
-        <span class="value-label">{@html tex(String.raw`\mathrm{surprisal}(u)`)}: </span>
-        <span class="value-number">{surprisalStr} {unit}</span>
-      </div>
-      <div class="value-item">
-        <span class="value-dot" style="background-color: {KL_COLOR};"></span>
-        <!-- eslint-disable-next-line svelte/no-at-html-tags -->
-        <span class="value-label">{@html tex(String.raw`{\color{#45a085}D_{\mathrm{KL}}(p_{Z|u} \| p_Z)}`)}: </span>
-        <span class="value-number">{klStr} {unit}</span>
-      </div>
-      <div class="value-item">
-        <span class="value-dot" style="background-color: {R_COLOR};"></span>
-        <!-- eslint-disable-next-line svelte/no-at-html-tags -->
-        <span class="value-label">{@html tex(String.raw`{\color{#e87040}R(u)}`)}: </span>
-        <span class="value-number">{rStr} {unit}</span>
-      </div>
-    </div>
   {:else}
     <div class="undefined-message">
       {#if !Number.isFinite(surprisal)}
@@ -223,16 +179,10 @@
 
 <style>
   .surprisal-bar {
-    background: var(--bg-surface);
-    border-radius: 8px;
-    padding: 1rem;
-    margin-top: 1.5rem;
+    margin-top: 1rem;
   }
 
   .header {
-    display: flex;
-    justify-content: space-between;
-    align-items: baseline;
     margin-bottom: 0.75rem;
   }
 
@@ -241,18 +191,8 @@
     font-size: 0.9rem;
   }
 
-  .equation {
-    font-size: 0.85rem;
-    color: var(--text-faint);
-  }
-
-  .equation :global(.katex) {
-    color: var(--text-muted);
-  }
-
   .bar-wrapper {
     position: relative;
-    margin-bottom: 1rem;
   }
 
   .bar-container {
@@ -308,39 +248,10 @@
   }
 
   .axis-label {
-    position: absolute;
-    right: 0;
-    top: 36px;
+    text-align: center;
     font-size: 0.7rem;
     color: var(--text-faint);
-  }
-
-  .values {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 1rem;
-  }
-
-  .value-item {
-    display: flex;
-    align-items: center;
-    gap: 0.4rem;
-    font-size: 0.85rem;
-  }
-
-  .value-dot {
-    width: 10px;
-    height: 10px;
-    border-radius: 2px;
-  }
-
-  .value-label {
-    color: var(--text-muted);
-  }
-
-  .value-number {
-    font-family: 'SF Mono', 'Monaco', monospace;
-    color: var(--text-primary);
+    margin-top: 2px;
   }
 
   .undefined-message {

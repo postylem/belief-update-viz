@@ -10,27 +10,12 @@
   import SurprisalBar from './components/SurprisalBar.svelte';
   import EquationDisplay from './components/EquationDisplay.svelte';
 
-  // Theme state
-  let lightTheme = $state(
-    typeof localStorage !== 'undefined' && localStorage.getItem('theme') === 'light'
-  );
-
-  $effect(() => {
-    if (lightTheme) {
-      document.documentElement.classList.add('light');
-      localStorage.setItem('theme', 'light');
-    } else {
-      document.documentElement.classList.remove('light');
-      localStorage.setItem('theme', 'dark');
-    }
-  });
-
   // Domain
   const domain = [0, 1];
 
   // Settings
   let logBase = $state(2);
-  let numControlPoints = $state(15);
+  let numControlPoints = $state(30);
   let surprisalAxisMax = $state(4);
 
   // Grid parameters
@@ -45,19 +30,23 @@
   let dz = $derived((domain[1] - domain[0]) / (GRID_SIZE - 1));
 
   // Preset state
-  let priorPresetIndex = $state(1); // Gaussian
-  let likPresetIndex = $state(1);   // Gaussian
-  let priorParams = $state({ ...priorPresets[1].defaultParams });
-  let likParams = $state({ ...likelihoodPresets[1].defaultParams });
+  const DEFAULT_PRIOR_IDX = 3;  // Bimodal
+  const DEFAULT_LIK_IDX = 1;   // Bell
+  const DEFAULT_LIK_PARAMS = { center: 0.7, width: 0.1 };
+
+  let priorPresetIndex = $state(DEFAULT_PRIOR_IDX);
+  let likPresetIndex = $state(DEFAULT_LIK_IDX);
+  let priorParams = $state({ ...priorPresets[DEFAULT_PRIOR_IDX].defaultParams });
+  let likParams = $state({ ...DEFAULT_LIK_PARAMS });
   let priorFreeEdit = $state(false);
   let likFreeEdit = $state(false);
 
   // Control point state
   let priorControlYs = $state(
-    priorPresets[1].generator(15, priorPresets[1].defaultParams, domain)
+    priorPresets[DEFAULT_PRIOR_IDX].generator(30, priorPresets[DEFAULT_PRIOR_IDX].defaultParams, domain)
   );
   let likControlYs = $state(
-    likelihoodPresets[1].generator(15, likelihoodPresets[1].defaultParams, domain)
+    likelihoodPresets[DEFAULT_LIK_IDX].generator(30, DEFAULT_LIK_PARAMS, domain)
   );
 
   // Control point x-coordinates
@@ -92,18 +81,40 @@
   let priorYMax = $state(null);
   let posteriorYMax = $state(null);
 
-  // Apply prior preset
-  function applyPriorPreset() {
-    const preset = priorPresets[priorPresetIndex];
-    const n = untrack(() => numControlPoints);
-    priorControlYs = preset.generator(n, priorParams, domain);
+  // Resample control points to a new count, preserving shape via interpolation
+  function resampleControlPoints(oldYs, newN) {
+    const oldN = oldYs.length;
+    if (oldN === newN) return oldYs;
+    if (oldN < 2) return Array(newN).fill(oldYs[0] || 0);
+    const oldXs = Array.from({ length: oldN }, (_, i) =>
+      domain[0] + (i / (oldN - 1)) * (domain[1] - domain[0])
+    );
+    const newXs = Array.from({ length: newN }, (_, i) =>
+      domain[0] + (i / (newN - 1)) * (domain[1] - domain[0])
+    );
+    return interpolateMonotone(oldXs, oldYs, newXs).map(v => Math.max(0, v));
   }
 
-  // Apply likelihood preset
-  function applyLikPreset() {
-    const preset = likelihoodPresets[likPresetIndex];
+  // Apply prior preset (or resample if free-editing)
+  function applyPriorPreset() {
     const n = untrack(() => numControlPoints);
-    likControlYs = preset.generator(n, likParams, domain);
+    if (untrack(() => priorFreeEdit)) {
+      priorControlYs = resampleControlPoints(untrack(() => priorControlYs), n);
+    } else {
+      const preset = priorPresets[priorPresetIndex];
+      priorControlYs = preset.generator(n, priorParams, domain);
+    }
+  }
+
+  // Apply likelihood preset (or resample if free-editing)
+  function applyLikPreset() {
+    const n = untrack(() => numControlPoints);
+    if (untrack(() => likFreeEdit)) {
+      likControlYs = resampleControlPoints(untrack(() => likControlYs), n);
+    } else {
+      const preset = likelihoodPresets[likPresetIndex];
+      likControlYs = preset.generator(n, likParams, domain);
+    }
   }
 
   // Handle free-edit: when user drags control points
@@ -117,34 +128,20 @@
 
   // Reset all
   function resetAll() {
-    priorPresetIndex = 1;
-    likPresetIndex = 1;
-    priorParams = { ...priorPresets[1].defaultParams };
-    likParams = { ...likelihoodPresets[1].defaultParams };
-    numControlPoints = 15;
+    priorPresetIndex = DEFAULT_PRIOR_IDX;
+    likPresetIndex = DEFAULT_LIK_IDX;
+    priorParams = { ...priorPresets[DEFAULT_PRIOR_IDX].defaultParams };
+    likParams = { ...DEFAULT_LIK_PARAMS };
+    numControlPoints = 30;
     logBase = 2;
     priorFreeEdit = false;
     likFreeEdit = false;
-    priorControlYs = priorPresets[1].generator(15, priorPresets[1].defaultParams, domain);
-    likControlYs = likelihoodPresets[1].generator(15, likelihoodPresets[1].defaultParams, domain);
+    priorControlYs = priorPresets[DEFAULT_PRIOR_IDX].generator(30, priorPresets[DEFAULT_PRIOR_IDX].defaultParams, domain);
+    likControlYs = likelihoodPresets[DEFAULT_LIK_IDX].generator(30, DEFAULT_LIK_PARAMS, domain);
   }
 </script>
 
-<main>
-  <header>
-    <h1>Continuous Bayesian Belief Update</h1>
-    <div class="header-actions">
-      <a href="/" class="nav-link">Discrete version</a>
-      <button
-        class="theme-toggle"
-        onclick={() => lightTheme = !lightTheme}
-        title={lightTheme ? 'Switch to dark theme' : 'Switch to light theme'}
-      >
-        {lightTheme ? '⏾' : '☀︎'}
-      </button>
-    </div>
-  </header>
-
+<div class="continuous-app">
   <ContinuousControls
     bind:priorPresetIndex
     bind:likPresetIndex
@@ -175,12 +172,13 @@
 
     <CurveChart
       title="Likelihood"
-      titleTex={String.raw`\text{Likelihood } p(u \mid z)`}
+      titleTex={String.raw`\text{Likelihood } \operatorname{lik}_u(z) \coloneqq p(u \mid z)`}
       bind:controlPointYs={likControlYs}
       gridValues={likGrid}
       {gridX}
       editable={true}
       colorFn={likelihoodColor}
+      maxDragY={1}
       {domain}
       onchange={onLikEdit}
     />
@@ -207,75 +205,35 @@
     {/if}
   </div>
 
-  <SurprisalBar
-    {surprisal}
-    {kl}
-    {r}
-    {unit}
-    axisMax={surprisalAxisMax}
-  />
+  <div class="info-card">
+    <SurprisalBar
+      {surprisal}
+      {kl}
+      {r}
+      {unit}
+      axisMax={surprisalAxisMax}
+    />
 
-  <EquationDisplay
-    {kl}
-    {r}
-    {surprisal}
-    {unit}
-  />
-</main>
+    <EquationDisplay
+      {kl}
+      {r}
+      {surprisal}
+      {unit}
+    />
+  </div>
+</div>
 
 <style>
-  main {
+  .continuous-app {
     max-width: 1400px;
     margin: 0 auto;
-    padding: 1.5rem 2rem;
   }
 
-  header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 1.5rem;
-  }
-
-  h1 {
-    margin: 0;
-    font-weight: 600;
-    color: var(--text-primary);
-  }
-
-  .header-actions {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-  }
-
-  .nav-link {
-    font-size: 0.85rem;
-    color: var(--text-muted);
-    text-decoration: none;
-    padding: 0.5rem 0.75rem;
-    border-radius: 6px;
-    border: 1px solid var(--border-default);
+  .info-card {
     background: var(--bg-surface);
-  }
-
-  .nav-link:hover {
-    color: var(--text-primary);
-    background: var(--bg-surface-hover);
-  }
-
-  .theme-toggle {
-    background: var(--bg-surface);
-    border: 1px solid var(--border-default);
     border-radius: 8px;
-    padding: 0.5rem 0.75rem;
-    font-size: 1.25rem;
-    cursor: pointer;
-  }
-
-  .theme-toggle:hover {
-    background: var(--bg-surface-hover);
-    border-color: var(--border-strong);
+    padding: 1.5rem;
+    margin-top: 1.5rem;
   }
 
   .charts-container {
@@ -307,10 +265,6 @@
   }
 
   @media (max-width: 768px) {
-    main {
-      padding: 1rem;
-    }
-
     .charts-container {
       flex-direction: column;
     }

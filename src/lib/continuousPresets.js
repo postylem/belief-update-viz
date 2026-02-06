@@ -45,14 +45,6 @@ function bimodalPDF(x, mu1, mu2, sigma, weight) {
   return weight * gaussianPDF(x, mu1, sigma) + (1 - weight) * gaussianPDF(x, mu2, sigma);
 }
 
-function peakedPDF(x, center, sharpness) {
-  // Using a Beta-like shape centered on `center` with concentration `sharpness`
-  const alpha = center * sharpness;
-  const beta = (1 - center) * sharpness;
-  if (alpha < 0.5 || beta < 0.5) return gaussianPDF(x, center, 0.05);
-  return betaPDF(x, alpha, beta);
-}
-
 // ---- Preset generator helper ----
 
 function generateControlPoints(nPoints, domain, pdfFn) {
@@ -73,12 +65,12 @@ export const priorPresets = [
       generateControlPoints(n, domain, x => uniformPDF(x, domain[0], domain[1])),
   },
   {
-    name: 'Gaussian',
-    family: 'gaussian',
+    name: 'Truncated Normal',
+    family: 'truncnorm',
     defaultParams: { mu: 0.5, sigma: 0.15 },
     paramDefs: [
-      { name: 'mu', label: 'Mean (μ)', min: 0, max: 1, step: 0.01, default: 0.5 },
-      { name: 'sigma', label: 'Std dev (σ)', min: 0.02, max: 0.4, step: 0.01, default: 0.15 },
+      { name: 'mu', labelTex: '\\mu', min: 0, max: 1, step: 0.01, default: 0.5 },
+      { name: 'sigma', labelTex: '\\sigma', min: 0.02, max: 0.4, step: 0.01, default: 0.15 },
     ],
     generator: (n, params, domain) =>
       generateControlPoints(n, domain, x => gaussianPDF(x, params.mu, params.sigma)),
@@ -88,8 +80,8 @@ export const priorPresets = [
     family: 'beta',
     defaultParams: { alpha: 2, beta: 5 },
     paramDefs: [
-      { name: 'alpha', label: 'Alpha (α)', min: 0.5, max: 20, step: 0.1, default: 2 },
-      { name: 'beta', label: 'Beta (β)', min: 0.5, max: 20, step: 0.1, default: 5 },
+      { name: 'alpha', labelTex: '\\alpha', min: 0.5, max: 20, step: 0.1, default: 2 },
+      { name: 'beta', labelTex: '\\beta', min: 0.5, max: 20, step: 0.1, default: 5 },
     ],
     generator: (n, params, domain) =>
       generateControlPoints(n, domain, x => betaPDF(x, params.alpha, params.beta)),
@@ -99,24 +91,13 @@ export const priorPresets = [
     family: 'bimodal',
     defaultParams: { mu1: 0.3, mu2: 0.7, sigma: 0.08, weight: 0.5 },
     paramDefs: [
-      { name: 'mu1', label: 'Mode 1 (μ₁)', min: 0, max: 1, step: 0.01, default: 0.3 },
-      { name: 'mu2', label: 'Mode 2 (μ₂)', min: 0, max: 1, step: 0.01, default: 0.7 },
-      { name: 'sigma', label: 'Std dev (σ)', min: 0.02, max: 0.2, step: 0.01, default: 0.08 },
-      { name: 'weight', label: 'Weight (w)', min: 0, max: 1, step: 0.01, default: 0.5 },
+      { name: 'mu1', labelTex: '\\mu_1', min: 0, max: 1, step: 0.01, default: 0.3 },
+      { name: 'mu2', labelTex: '\\mu_2', min: 0, max: 1, step: 0.01, default: 0.7 },
+      { name: 'sigma', labelTex: '\\sigma', min: 0.02, max: 0.2, step: 0.01, default: 0.08 },
+      { name: 'weight', labelTex: 'w', min: 0, max: 1, step: 0.01, default: 0.5 },
     ],
     generator: (n, params, domain) =>
       generateControlPoints(n, domain, x => bimodalPDF(x, params.mu1, params.mu2, params.sigma, params.weight)),
-  },
-  {
-    name: 'Peaked',
-    family: 'peaked',
-    defaultParams: { center: 0.5, sharpness: 20 },
-    paramDefs: [
-      { name: 'center', label: 'Center', min: 0.05, max: 0.95, step: 0.01, default: 0.5 },
-      { name: 'sharpness', label: 'Sharpness', min: 2, max: 100, step: 1, default: 20 },
-    ],
-    generator: (n, params, domain) =>
-      generateControlPoints(n, domain, x => peakedPDF(x, params.center, params.sharpness)),
   },
 ];
 
@@ -124,54 +105,56 @@ export const priorPresets = [
 
 export const likelihoodPresets = [
   {
-    name: 'Uniform',
+    name: 'Flat',
     family: 'uniform',
     defaultParams: { level: 0.5 },
     paramDefs: [
-      { name: 'level', label: 'Level', min: 0.01, max: 1, step: 0.01, default: 0.5 },
+      { name: 'level', labelTex: 'c', min: 0.01, max: 1, step: 0.01, default: 0.5 },
     ],
     generator: (n, params, _domain) =>
       Array(n).fill(params.level),
   },
   {
-    name: 'Gaussian',
-    family: 'gaussian',
-    defaultParams: { mu: 0.5, sigma: 0.1 },
+    name: 'One peak',
+    family: 'onepeak',
+    defaultParams: { center: 0.5, width: 0.1 },
     paramDefs: [
-      { name: 'mu', label: 'Peak (μ)', min: 0, max: 1, step: 0.01, default: 0.5 },
-      { name: 'sigma', label: 'Width (σ)', min: 0.02, max: 0.4, step: 0.01, default: 0.1 },
+      { name: 'center', labelTex: 'c', min: 0, max: 1, step: 0.01, default: 0.5 },
+      { name: 'width', labelTex: 'w', min: 0.02, max: 0.4, step: 0.01, default: 0.1 },
     ],
     generator: (n, params, domain) => {
       const [a, b] = domain;
       const xs = Array.from({ length: n }, (_, i) => a + (i / (n - 1)) * (b - a));
-      // Normalize so peak = 1
-      return xs.map(x => Math.exp(-0.5 * ((x - params.mu) / params.sigma) ** 2));
+      return xs.map(x => Math.exp(-0.5 * ((x - params.center) / params.width) ** 2));
     },
   },
   {
-    name: 'Step',
-    family: 'step',
-    defaultParams: { cutoff: 0.5, high: 0.9, low: 0.1 },
+    name: 'Window',
+    family: 'window',
+    defaultParams: { a: 0.3, b: 0.7, high: 0.9, low: 0.1 },
     paramDefs: [
-      { name: 'cutoff', label: 'Cutoff', min: 0, max: 1, step: 0.01, default: 0.5 },
-      { name: 'high', label: 'High', min: 0.01, max: 1, step: 0.01, default: 0.9 },
-      { name: 'low', label: 'Low', min: 0.01, max: 1, step: 0.01, default: 0.1 },
+      { name: 'a', labelTex: 'a', min: 0, max: 1, step: 0.01, default: 0.3 },
+      { name: 'b', labelTex: 'b', min: 0, max: 1, step: 0.01, default: 0.7 },
+      { name: 'high', labelTex: 'h', min: 0.01, max: 1, step: 0.01, default: 0.9 },
+      { name: 'low', labelTex: '\\ell', min: 0.01, max: 1, step: 0.01, default: 0.1 },
     ],
     generator: (n, params, domain) => {
-      const [a, b] = domain;
+      const [domLo, domHi] = domain;
+      const lo = Math.min(params.a, params.b);
+      const hi = Math.max(params.a, params.b);
       return Array.from({ length: n }, (_, i) => {
-        const x = a + (i / (n - 1)) * (b - a);
-        return x < params.cutoff ? params.high : params.low;
+        const x = domLo + (i / (n - 1)) * (domHi - domLo);
+        return (x >= lo && x <= hi) ? params.high : params.low;
       });
     },
   },
   {
-    name: 'Linear',
-    family: 'linear',
+    name: 'Ramp',
+    family: 'ramp',
     defaultParams: { left: 0.1, right: 0.9 },
     paramDefs: [
-      { name: 'left', label: 'Left', min: 0.01, max: 1, step: 0.01, default: 0.1 },
-      { name: 'right', label: 'Right', min: 0.01, max: 1, step: 0.01, default: 0.9 },
+      { name: 'left', labelTex: 'a', min: 0.01, max: 1, step: 0.01, default: 0.1 },
+      { name: 'right', labelTex: 'b', min: 0.01, max: 1, step: 0.01, default: 0.9 },
     ],
     generator: (n, params, _domain) =>
       Array.from({ length: n }, (_, i) => {
@@ -180,19 +163,24 @@ export const likelihoodPresets = [
       }),
   },
   {
-    name: 'Peaked',
-    family: 'peaked',
-    defaultParams: { center: 0.5, sharpness: 30 },
+    name: 'Two peaks',
+    family: 'twopeaks',
+    defaultParams: { c1: 0.3, c2: 0.7, width: 0.08, weight: 0.5 },
     paramDefs: [
-      { name: 'center', label: 'Center', min: 0, max: 1, step: 0.01, default: 0.5 },
-      { name: 'sharpness', label: 'Sharpness', min: 1, max: 100, step: 1, default: 30 },
+      { name: 'c1', labelTex: 'c_1', min: 0, max: 1, step: 0.01, default: 0.3 },
+      { name: 'c2', labelTex: 'c_2', min: 0, max: 1, step: 0.01, default: 0.7 },
+      { name: 'width', labelTex: 'w', min: 0.02, max: 0.2, step: 0.01, default: 0.08 },
+      { name: 'weight', labelTex: 'p', min: 0, max: 1, step: 0.01, default: 0.5 },
     ],
     generator: (n, params, domain) => {
       const [a, b] = domain;
-      return Array.from({ length: n }, (_, i) => {
-        const x = a + (i / (n - 1)) * (b - a);
-        return Math.exp(-params.sharpness * (x - params.center) ** 2);
-      });
+      const xs = Array.from({ length: n }, (_, i) => a + (i / (n - 1)) * (b - a));
+      const raw = xs.map(x =>
+        params.weight * Math.exp(-0.5 * ((x - params.c1) / params.width) ** 2) +
+        (1 - params.weight) * Math.exp(-0.5 * ((x - params.c2) / params.width) ** 2)
+      );
+      const maxVal = Math.max(...raw);
+      return maxVal > 0 ? raw.map(v => v / maxVal) : raw;
     },
   },
 ];
