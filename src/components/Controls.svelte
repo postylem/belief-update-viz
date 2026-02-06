@@ -6,6 +6,8 @@
     logBase = $bindable(2),
     allowZeroes = $bindable(false),
     useLogSliders = $bindable(false),
+    likelihood = $bindable([]),
+    minValue = 0,
     onApplyPriorPreset = () => {},
     onApplyLikelihoodPreset = () => {},
     onReset = () => {},
@@ -32,6 +34,49 @@
       onApplyLikelihoodPreset(likelihoodPresets[key].generator);
       event.target.value = '';
     }
+  }
+
+  // Likelihood scale slider
+  let scaleFactor = $state(1);
+  let scaleSnapshot = $state([]);   // likelihood values at drag start
+  let scaleDragging = $state(false);
+
+  // Limits based on current likelihood (recomputed when not dragging)
+  let scaleMax = $derived.by(() => {
+    if (scaleDragging) return scaleMaxAtStart;
+    const maxLik = Math.max(...likelihood, 1e-12);
+    return 1 / maxLik;
+  });
+  let scaleMin = $derived.by(() => {
+    if (scaleDragging) return scaleMinAtStart;
+    if (allowZeroes) return 0.01;
+    const minLik = Math.min(...likelihood.filter(v => v > 0));
+    return minLik > 0 ? minValue / minLik : 0.01;
+  });
+  // Frozen limits during drag
+  let scaleMaxAtStart = $state(10);
+  let scaleMinAtStart = $state(0.01);
+
+  function onScaleStart() {
+    scaleDragging = true;
+    scaleSnapshot = [...likelihood];
+    scaleMaxAtStart = 1 / Math.max(...likelihood, 1e-12);
+    const minLik = Math.min(...likelihood.filter(v => v > 0));
+    scaleMinAtStart = (!allowZeroes && minLik > 0) ? minValue / minLik : 0.01;
+  }
+
+  function onScaleInput(event) {
+    if (!scaleDragging) onScaleStart();
+    scaleFactor = parseFloat(event.target.value);
+    likelihood = scaleSnapshot.map(v =>
+      Math.min(1, Math.max(minValue, v * scaleFactor))
+    );
+  }
+
+  function onScaleEnd() {
+    scaleFactor = 1;
+    scaleDragging = false;
+    scaleSnapshot = [];
   }
 </script>
 
@@ -113,6 +158,19 @@
           <option value={key}>{preset.name}</option>
         {/each}
       </select>
+      <label class="scale-slider">
+        Scale likelihood
+        <input
+          type="range"
+          min={scaleMin}
+          max={scaleMax}
+          step="0.001"
+          value={scaleFactor}
+          oninput={onScaleInput}
+          onpointerdown={onScaleStart}
+          onpointerup={onScaleEnd}
+        />
+      </label>
     </div>
 
     <div class="preset-column reset-column">
@@ -178,6 +236,14 @@
   .preset-column > label {
     font-size: 0.75rem;
     color: var(--text-faint);
+  }
+
+  .scale-slider {
+    margin-top: 0.25rem;
+  }
+
+  .scale-slider input[type="range"] {
+    width: 100%;
   }
 
   .toggles {

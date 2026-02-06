@@ -2,6 +2,8 @@
 
 This file provides guidance to AI coding assistants (Claude Code, Cursor, etc.) when working with this repository.
 
+See @DESIGN.md for project design overview.
+
 ## Build Commands
 
 ```bash
@@ -16,12 +18,18 @@ Interactive visualization of Bayesian belief updating built with Svelte 5 + D3 +
 
 ### Data Flow
 
-All state lives in `App.svelte`. The core reactive loop:
-1. User edits `prior` or `likelihood` arrays (via DistributionChart drag/input)
-2. `computeAll()` derives `posterior`, `kl`, `surprisal`, `r` from these arrays
-3. Child components reactively render the new values
+`App.svelte` is the shell: manages theme and a discrete/continuous mode toggle. It conditionally renders `DiscreteApp` or `ContinuousApp`, each managing their own state.
+
+**Discrete**: User edits `prior`/`likelihood` arrays → `computeAll()` derives posterior, KL, surprisal, R.
+**Continuous**: User edits control points → interpolation to grid → `computeAllContinuous()` derives all quantities.
 
 ### Key Files
+
+- **`src/App.svelte`** - Shell: header with title, mode toggle (discrete/continuous), theme toggle. Renders DiscreteApp or ContinuousApp.
+
+- **`src/DiscreteApp.svelte`** - Discrete mode state management. Prior/likelihood arrays, support size, presets, settings.
+
+- **`src/ContinuousApp.svelte`** - Continuous mode state management. Control point arrays, preset indices, params. Derives grid via interpolation, computes posterior via `computeAllContinuous`.
 
 - **`src/lib/math.js`** - Pure functions for Bayesian computations. `computeAll(prior, likelihood, logBase)` for discrete, `computeAllContinuous(prior, likelihood, logBase, dz)` for continuous. Also exports `normalizeDensity`, `trapz`.
 
@@ -38,8 +46,6 @@ All state lives in `App.svelte`. The core reactive loop:
 - **`src/components/CurveChart.svelte`** - Continuous: SVG area chart with draggable control points. Accepts `controlPointYs` (bindable), `gridValues`, `gridX`, `editable`, `colorFn`.
 
 - **`src/components/ContinuousControls.svelte`** - Continuous: preset selectors, parameter sliders, free-edit toggle, control point count.
-
-- **`src/ContinuousApp.svelte`** - Main app for continuous mode. State: control point arrays, preset indices, params. Derives grid via interpolation, computes posterior via `computeAllContinuous`.
 
 ### Math Identity
 
@@ -103,7 +109,7 @@ Commit early and often with informative messages. Each commit should represent a
 
 ## Documentation
 
-Keep `DESIGN.md` up to date as you make changes. It serves as the comprehensive design document for this project, covering:
+Keep @DESIGN.md up to date as you make changes. It serves as the comprehensive design document for this project, covering:
 
 - Mathematical foundation and formulas
 - Feature descriptions and user interactions

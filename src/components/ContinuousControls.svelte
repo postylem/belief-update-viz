@@ -1,5 +1,10 @@
 <script>
   import { priorPresets, likelihoodPresets } from '../lib/continuousPresets.js';
+  import katex from 'katex';
+
+  function tex(str) {
+    return katex.renderToString(str, { throwOnError: false, trust: true });
+  }
 
   let {
     priorPresetIndex = $bindable(0),
@@ -8,7 +13,7 @@
     likParams = $bindable({}),
     priorFreeEdit = $bindable(false),
     likFreeEdit = $bindable(false),
-    numControlPoints = $bindable(15),
+    numControlPoints = $bindable(30),
     logBase = $bindable(2),
     onApplyPriorPreset = () => {},
     onApplyLikPreset = () => {},
@@ -59,9 +64,8 @@
 
   function handleControlPointsChange(event) {
     numControlPoints = parseInt(event.target.value);
-    // Re-apply both presets with new control point count
-    if (!priorFreeEdit) onApplyPriorPreset();
-    if (!likFreeEdit) onApplyLikPreset();
+    onApplyPriorPreset();
+    onApplyLikPreset();
   }
 </script>
 
@@ -78,7 +82,8 @@
       {#each priorPresets[priorPresetIndex].paramDefs as param}
         <div class="param-slider">
           <label>
-            {param.label}: {priorParams[param.name]?.toFixed(2) ?? param.default.toFixed(2)}
+            <!-- eslint-disable-next-line svelte/no-at-html-tags -->
+            <span class="param-tex">{@html tex(param.labelTex)}</span> = {priorParams[param.name]?.toFixed(2) ?? param.default.toFixed(2)}
             <input
               type="range"
               min={param.min}
@@ -90,12 +95,10 @@
           </label>
         </div>
       {/each}
-      {#if priorFreeEdit}
-        <div class="free-edit-badge">
-          <span>Free editing</span>
-          <button class="reset-parametric" onclick={resetPriorToParametric}>Reset to parametric</button>
-        </div>
-      {/if}
+      <div class="free-edit-badge" class:hidden={!priorFreeEdit}>
+        <span>Free editing</span>
+        <button class="reset-parametric" onclick={resetPriorToParametric}>Reset to parametric</button>
+      </div>
     </div>
 
     <!-- Likelihood controls -->
@@ -109,7 +112,8 @@
       {#each likelihoodPresets[likPresetIndex].paramDefs as param}
         <div class="param-slider">
           <label>
-            {param.label}: {likParams[param.name]?.toFixed(2) ?? param.default.toFixed(2)}
+            <!-- eslint-disable-next-line svelte/no-at-html-tags -->
+            <span class="param-tex">{@html tex(param.labelTex)}</span> = {likParams[param.name]?.toFixed(2) ?? param.default.toFixed(2)}
             <input
               type="range"
               min={param.min}
@@ -121,12 +125,10 @@
           </label>
         </div>
       {/each}
-      {#if likFreeEdit}
-        <div class="free-edit-badge">
-          <span>Free editing</span>
-          <button class="reset-parametric" onclick={resetLikToParametric}>Reset to parametric</button>
-        </div>
-      {/if}
+      <div class="free-edit-badge" class:hidden={!likFreeEdit}>
+        <span>Free editing</span>
+        <button class="reset-parametric" onclick={resetLikToParametric}>Reset to parametric</button>
+      </div>
     </div>
 
     <!-- Global controls -->
@@ -138,7 +140,7 @@
           <input
             type="range"
             min="5"
-            max="30"
+            max="100"
             step="1"
             value={numControlPoints}
             oninput={handleControlPointsChange}
@@ -219,6 +221,10 @@
     accent-color: var(--text-faint);
   }
 
+  :global(.param-tex .katex) {
+    font-size: 0.85rem;
+  }
+
   .free-edit-badge {
     display: flex;
     align-items: center;
@@ -226,6 +232,10 @@
     margin-top: 0.3rem;
     font-size: 0.78rem;
     color: var(--warning-text);
+  }
+
+  .free-edit-badge.hidden {
+    visibility: hidden;
   }
 
   .reset-parametric {
