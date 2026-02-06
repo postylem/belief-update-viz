@@ -93,8 +93,12 @@ export function posteriorColor(posteriorValue, priorValue, likelihoodValue) {
 /**
  * Fixed colors for KL and R in the surprisal bar
  */
-export const KL_COLOR = 'hsl(280, 70%, 55%)';  // Purple
-export const R_COLOR = 'hsl(180, 60%, 45%)';   // Teal
+export const KL_COLOR = 'hsl(155, 40%, 45%)';  // Blue-ish sage green
+export const R_COLOR = 'hsl(25, 85%, 58%)';    // Red-ish orange
+
+// Hex versions for KaTeX \color commands
+export const KL_COLOR_HEX = '#45a085';  // Blue-ish sage green
+export const R_COLOR_HEX = '#e87040';   // Red-ish orange
 
 /**
  * Text colors that contrast well with backgrounds

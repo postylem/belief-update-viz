@@ -17,9 +17,9 @@
   const mainEquation = String.raw`
     \underbrace{-\log \mathbb{E}_{p_Z}[p(u \mid Z)]}_{\mathrm{surprisal}(u)}
     \;=\;
-    \underbrace{\color{#9966cc}D_{\mathrm{KL}}\bigl(p_{Z \mid u} \,\|\, p_Z\bigr)}_{\color{#9966cc}D_{\mathrm{KL}}}
+    \underbrace{\color{#45a085}D_{\mathrm{KL}}\bigl(p_{Z \mid u} \,\|\, p_Z\bigr)}_{\color{#45a085}D_{\mathrm{KL}}}
     \;+\;
-    \underbrace{\color{#33aaaa}\mathbb{E}_{p_{Z \mid u}}\bigl[-\log p(u \mid Z)\bigr]}_{\color{#33aaaa}R(u)}
+    \underbrace{\color{#e87040}\mathbb{E}_{p_{Z \mid u}}\bigl[-\log p(u \mid Z)\bigr]}_{\color{#e87040}R(u)}
   `;
 
   function formatVal(v) {
@@ -43,9 +43,9 @@
       const valuesEquation = String.raw`
         ${formatVal(surprisal)}
         \;=\;
-        \color{#9966cc}${formatVal(kl)}
+        \color{#45a085}${formatVal(kl)}
         \;+\;
-        \color{#33aaaa}${formatVal(r)}
+        \color{#e87040}${formatVal(r)}
         \quad \text{${unit}}
       `;
       katex.render(valuesEquation, valuesContainer, {
@@ -64,7 +64,7 @@
 
 <style>
   .equation-display {
-    background: rgba(255, 255, 255, 0.03);
+    background: var(--bg-surface);
     border-radius: 8px;
     padding: 1.5rem;
     margin-top: 1.5rem;
@@ -77,7 +77,7 @@
 
   .equation-values {
     padding-top: 0.5rem;
-    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    border-top: 1px solid var(--border-subtle);
   }
 
   :global(.equation-display .katex) {

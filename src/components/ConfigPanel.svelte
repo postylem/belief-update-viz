@@ -2,7 +2,9 @@
   let {
     labels = $bindable([]),
     epsilon = $bindable(1e-6),
+    surprisalAxisMax = $bindable(6),
     expanded = $bindable(false),
+    onResetAll = () => {},
   } = $props();
 
   function handleLabelChange(index, event) {
@@ -15,6 +17,13 @@
     const val = parseFloat(event.target.value);
     if (!isNaN(val) && val > 0 && val < 1) {
       epsilon = val;
+    }
+  }
+
+  function handleAxisMaxChange(event) {
+    const val = parseFloat(event.target.value);
+    if (!isNaN(val) && val > 0) {
+      surprisalAxisMax = val;
     }
   }
 </script>
@@ -62,6 +71,33 @@
           <span class="hint">e.g., 1e-6, 0.001</span>
         </div>
       </div>
+
+      <div class="section">
+        <h4>Surprisal Axis Maximum</h4>
+        <p class="description">
+          Default maximum for the surprisal bar axis (in bits/nats). The axis auto-scales when surprisal exceeds this value.
+        </p>
+        <div class="axis-max-input">
+          <input
+            type="range"
+            min="1"
+            max="20"
+            step="0.5"
+            bind:value={surprisalAxisMax}
+          />
+          <input
+            type="text"
+            value={surprisalAxisMax}
+            onchange={handleAxisMaxChange}
+          />
+        </div>
+      </div>
+
+      <div class="section reset-section">
+        <button class="reset-all-btn" onclick={onResetAll}>
+          Reset All to Defaults
+        </button>
+      </div>
     </div>
   {/if}
 </div>
@@ -74,7 +110,7 @@
   .toggle-btn {
     background: none;
     border: none;
-    color: rgba(255, 255, 255, 0.7);
+    color: var(--text-muted);
     font-size: 0.85rem;
     cursor: pointer;
     padding: 0.5rem 0;
@@ -84,7 +120,7 @@
   }
 
   .toggle-btn:hover {
-    color: rgba(255, 255, 255, 0.9);
+    color: var(--text-primary);
   }
 
   .arrow {
@@ -93,7 +129,7 @@
   }
 
   .panel-content {
-    background: rgba(255, 255, 255, 0.03);
+    background: var(--bg-surface);
     border-radius: 8px;
     padding: 1rem;
     margin-top: 0.5rem;
@@ -111,12 +147,12 @@
     margin: 0 0 0.75rem 0;
     font-size: 0.9rem;
     font-weight: 500;
-    color: rgba(255, 255, 255, 0.9);
+    color: var(--text-primary);
   }
 
   .description {
     font-size: 0.8rem;
-    color: rgba(255, 255, 255, 0.5);
+    color: var(--text-faint);
     margin: 0 0 0.5rem 0;
   }
 
@@ -134,23 +170,23 @@
 
   .label-index {
     font-size: 0.75rem;
-    color: rgba(255, 255, 255, 0.5);
+    color: var(--text-faint);
     min-width: 1.5rem;
   }
 
   .label-input input {
     flex: 1;
-    background: rgba(255, 255, 255, 0.1);
-    border: 1px solid rgba(255, 255, 255, 0.15);
+    background: var(--input-bg);
+    border: 1px solid var(--border-subtle);
     border-radius: 4px;
-    color: white;
+    color: var(--text-primary);
     padding: 0.3rem 0.5rem;
     font-size: 0.8rem;
   }
 
   .label-input input:focus {
     outline: none;
-    border-color: rgba(255, 255, 255, 0.3);
+    border-color: var(--border-strong);
   }
 
   .epsilon-input {
@@ -161,10 +197,10 @@
 
   .epsilon-input input {
     width: 100px;
-    background: rgba(255, 255, 255, 0.1);
-    border: 1px solid rgba(255, 255, 255, 0.15);
+    background: var(--input-bg);
+    border: 1px solid var(--border-subtle);
     border-radius: 4px;
-    color: white;
+    color: var(--text-primary);
     padding: 0.3rem 0.5rem;
     font-size: 0.85rem;
     font-family: monospace;
@@ -172,11 +208,61 @@
 
   .epsilon-input input:focus {
     outline: none;
-    border-color: rgba(255, 255, 255, 0.3);
+    border-color: var(--border-strong);
   }
 
   .hint {
     font-size: 0.75rem;
-    color: rgba(255, 255, 255, 0.4);
+    color: var(--text-faintest);
+  }
+
+  .axis-max-input {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  .axis-max-input input[type="range"] {
+    flex: 1;
+    max-width: 200px;
+    cursor: pointer;
+  }
+
+  .axis-max-input input[type="text"] {
+    width: 60px;
+    background: var(--input-bg);
+    border: 1px solid var(--border-subtle);
+    border-radius: 4px;
+    color: var(--text-primary);
+    padding: 0.3rem 0.5rem;
+    font-size: 0.85rem;
+    font-family: monospace;
+    text-align: right;
+  }
+
+  .axis-max-input input[type="text"]:focus {
+    outline: none;
+    border-color: var(--border-strong);
+  }
+
+  .reset-section {
+    padding-top: 0.5rem;
+    border-top: 1px solid var(--border-subtle);
+  }
+
+  .reset-all-btn {
+    background: var(--reset-bg);
+    border: 1px solid var(--reset-border);
+    border-radius: 4px;
+    color: var(--reset-text);
+    padding: 0.5rem 1rem;
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: background-color 0.15s ease, border-color 0.15s ease;
+  }
+
+  .reset-all-btn:hover {
+    background: var(--reset-bg-hover);
+    border-color: var(--reset-border-hover);
   }
 </style>

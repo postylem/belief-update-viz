@@ -36,8 +36,8 @@
 </script>
 
 <div class="controls">
-  <div class="control-group">
-    <label>
+  <div class="top-row">
+    <label class="support-size">
       Support size
       <input
         type="range"
@@ -47,10 +47,55 @@
       />
       <span class="value">{supportSize}</span>
     </label>
+
+    <div class="toggles">
+      <label class="toggle">
+        <input
+          type="radio"
+          name="unit"
+          value={2}
+          checked={logBase === 2}
+          onchange={() => logBase = 2}
+        />
+        Bits
+      </label>
+      <label class="toggle">
+        <input
+          type="radio"
+          name="unit"
+          value={Math.E}
+          checked={logBase === Math.E}
+          onchange={() => logBase = Math.E}
+        />
+        Nats
+      </label>
+    </div>
+
+    <div class="toggles">
+      <label class="checkbox">
+        <input
+          type="checkbox"
+          bind:checked={allowZeroes}
+        />
+        Allow zeroes
+      </label>
+
+      <label class="checkbox" class:disabled={allowZeroes}>
+        <input
+          type="checkbox"
+          bind:checked={useLogSliders}
+          disabled={allowZeroes}
+        />
+        Log sliders
+        {#if allowZeroes}
+          <span class="hint">(disabled with zeroes)</span>
+        {/if}
+      </label>
+    </div>
   </div>
 
-  <div class="control-group presets">
-    <div class="preset-select">
+  <div class="bottom-row">
+    <div class="preset-column">
       <label for="prior-preset">Prior preset:</label>
       <select id="prior-preset" onchange={handlePriorPreset}>
         <option value="">Select...</option>
@@ -60,7 +105,7 @@
       </select>
     </div>
 
-    <div class="preset-select">
+    <div class="preset-column">
       <label for="lik-preset">Likelihood preset:</label>
       <select id="lik-preset" onchange={handleLikelihoodPreset}>
         <option value="">Select...</option>
@@ -69,87 +114,57 @@
         {/each}
       </select>
     </div>
-  </div>
 
-  <div class="control-group toggles">
-    <label class="toggle">
-      <input
-        type="radio"
-        name="unit"
-        value={2}
-        checked={logBase === 2}
-        onchange={() => logBase = 2}
-      />
-      Bits
-    </label>
-    <label class="toggle">
-      <input
-        type="radio"
-        name="unit"
-        value={Math.E}
-        checked={logBase === Math.E}
-        onchange={() => logBase = Math.E}
-      />
-      Nats
-    </label>
-  </div>
-
-  <div class="control-group toggles">
-    <label class="checkbox">
-      <input
-        type="checkbox"
-        bind:checked={allowZeroes}
-      />
-      Allow zeroes
-    </label>
-
-    <label class="checkbox" class:disabled={allowZeroes}>
-      <input
-        type="checkbox"
-        bind:checked={useLogSliders}
-        disabled={allowZeroes}
-      />
-      Log sliders
-      {#if allowZeroes}
-        <span class="hint">(disabled with zeroes)</span>
-      {/if}
-    </label>
-  </div>
-
-  <div class="control-group">
-    <button class="reset-btn" onclick={onReset}>
-      Reset
-    </button>
+    <div class="preset-column reset-column">
+      <div class="reset-wrapper">
+        <button class="reset-btn" onclick={onReset}>
+          Reset
+        </button>
+      </div>
+    </div>
   </div>
 </div>
 
 <style>
   .controls {
     display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    padding: 1rem;
+    background: var(--bg-surface);
+    border-radius: 8px;
+    margin-bottom: 1rem;
+  }
+
+  .top-row {
+    display: flex;
     flex-wrap: wrap;
     gap: 1.5rem;
-    align-items: flex-start;
-    padding: 1rem;
-    background: rgba(255, 255, 255, 0.05);
-    border-radius: 8px;
-    margin-bottom: 1.5rem;
+    align-items: center;
   }
 
-  .control-group {
+  .bottom-row {
+    display: flex;
+    gap: 1rem;
+  }
+
+  .preset-column {
+    flex: 1;
+    min-width: 0;
     display: flex;
     flex-direction: column;
-    gap: 0.5rem;
+    gap: 0.25rem;
   }
 
-  .control-group.presets {
-    flex-direction: row;
-    gap: 1rem;
+  .reset-column {
+    justify-content: flex-end;
   }
 
-  .control-group.toggles {
-    flex-direction: row;
-    gap: 1rem;
-    align-items: center;
+  .reset-wrapper {
+    display: flex;
+    justify-content: flex-end;
+    align-items: flex-end;
+    height: 100%;
   }
 
   label {
@@ -157,32 +172,33 @@
     align-items: center;
     gap: 0.5rem;
     font-size: 0.85rem;
-    color: rgba(255, 255, 255, 0.8);
+    color: var(--text-muted);
   }
 
-  .preset-select {
-    display: flex;
-    flex-direction: column;
-    gap: 0.25rem;
-  }
-
-  .preset-select label {
+  .preset-column > label {
     font-size: 0.75rem;
-    color: rgba(255, 255, 255, 0.6);
+    color: var(--text-faint);
+  }
+
+  .toggles {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
   }
 
   select {
-    background: rgba(255, 255, 255, 0.1);
-    border: 1px solid rgba(255, 255, 255, 0.2);
+    background: var(--input-bg);
+    border: 1px solid var(--border-default);
     border-radius: 4px;
-    color: white;
+    color: var(--text-primary);
     padding: 0.4rem 0.6rem;
     font-size: 0.85rem;
     cursor: pointer;
+    width: 100%;
   }
 
   select:hover {
-    background: rgba(255, 255, 255, 0.15);
+    background: var(--input-bg-hover);
   }
 
   input[type="range"] {
@@ -208,7 +224,7 @@
 
   .hint {
     font-size: 0.7rem;
-    color: rgba(255, 255, 255, 0.4);
+    color: var(--text-faintest);
   }
 
   input[type="radio"],
@@ -217,10 +233,10 @@
   }
 
   .reset-btn {
-    background: rgba(255, 100, 100, 0.2);
-    border: 1px solid rgba(255, 100, 100, 0.4);
+    background: var(--reset-bg);
+    border: 1px solid var(--reset-border);
     border-radius: 4px;
-    color: rgba(255, 200, 200, 0.9);
+    color: var(--reset-text);
     padding: 0.4rem 1rem;
     font-size: 0.85rem;
     cursor: pointer;
@@ -228,7 +244,17 @@
   }
 
   .reset-btn:hover {
-    background: rgba(255, 100, 100, 0.3);
-    border-color: rgba(255, 100, 100, 0.6);
+    background: var(--reset-bg-hover);
+    border-color: var(--reset-border-hover);
+  }
+
+  @media (max-width: 768px) {
+    .top-row {
+      gap: 0.75rem;
+    }
+
+    input[type="range"] {
+      width: 60px;
+    }
   }
 </style>

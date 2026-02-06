@@ -1,5 +1,5 @@
 <script>
-  import { untrack } from 'svelte';
+  import { untrack, onMount } from 'svelte';
   import katex from 'katex';
   import { computeAll, normalize } from './lib/math.js';
   import { uniform, uniformLikelihood } from './lib/presets.js';
@@ -16,6 +16,22 @@
     return katex.renderToString(str, { throwOnError: false, trust: true });
   }
 
+  // Theme state - initialize from localStorage
+  let lightTheme = $state(
+    typeof localStorage !== 'undefined' && localStorage.getItem('theme') === 'light'
+  );
+
+  // Apply theme to document root and persist to localStorage
+  $effect(() => {
+    if (lightTheme) {
+      document.documentElement.classList.add('light');
+      localStorage.setItem('theme', 'light');
+    } else {
+      document.documentElement.classList.remove('light');
+      localStorage.setItem('theme', 'dark');
+    }
+  });
+
   // Core state
   let supportSize = $state(4);
   let labels = $state(generateLabels(4));
@@ -27,6 +43,7 @@
   let allowZeroes = $state(false);
   let useLogSliders = $state(false);
   let epsilon = $state(1e-6);
+  let surprisalAxisMax = $state(4);
   let configExpanded = $state(false);
 
   // Derived: minimum value for sliders
@@ -115,6 +132,19 @@
     labels = generateLabels(supportSize);
   }
 
+  // Reset all settings to defaults
+  function resetAll() {
+    supportSize = 4;
+    logBase = 2;
+    allowZeroes = false;
+    useLogSliders = false;
+    epsilon = 1e-6;
+    surprisalAxisMax = 4;
+    prior = uniform(4);
+    likelihood = [0.9, 0.3, 0.2, 0.5];
+    labels = generateLabels(4);
+  }
+
   // Enforce min values when allowZeroes changes
   $effect(() => {
     if (!allowZeroes) {
@@ -130,7 +160,16 @@
 </script>
 
 <main>
-  <h1>Bayesian Belief Update</h1>
+  <header>
+    <h1>Bayesian Belief Update</h1>
+    <button
+      class="theme-toggle"
+      onclick={() => lightTheme = !lightTheme}
+      title={lightTheme ? 'Switch to dark theme' : 'Switch to light theme'}
+    >
+      {lightTheme ? '⏾' : '☀︎'}
+    </button>
+  </header>
 
   <Controls
     bind:supportSize
@@ -210,6 +249,7 @@
     {kl}
     {r}
     {unit}
+    axisMax={surprisalAxisMax}
   />
 
   <EquationDisplay
@@ -222,7 +262,9 @@
   <ConfigPanel
     bind:labels
     bind:epsilon
+    bind:surprisalAxisMax
     bind:expanded={configExpanded}
+    onResetAll={resetAll}
   />
 </main>
 
@@ -233,36 +275,67 @@
     padding: 1.5rem 2rem;
   }
 
+  header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+  }
+
   h1 {
-    margin: 0 0 1.5rem 0;
+    margin: 0;
     font-weight: 600;
-    color: rgba(255, 255, 255, 0.95);
+    color: var(--text-primary);
+  }
+
+  .theme-toggle {
+    background: var(--bg-surface);
+    border: 1px solid var(--border-default);
+    border-radius: 8px;
+    padding: 0.5rem 0.75rem;
+    font-size: 1.25rem;
+    cursor: pointer;
+    transition: background-color 0.15s ease, border-color 0.15s ease;
+  }
+
+  .theme-toggle:hover {
+    background: var(--bg-surface-hover);
+    border-color: var(--border-strong);
   }
 
   .charts-container {
     display: flex;
-    gap: 2rem;
-    flex-wrap: wrap;
+    gap: 1rem;
   }
 
   .chart-placeholder {
     flex: 1;
-    min-width: 250px;
+    min-width: 0;
+  }
+
+  @media (max-width: 768px) {
+    main {
+      padding: 1rem;
+    }
+
+    .charts-container {
+      gap: 0.5rem;
+    }
   }
 
   .chart-placeholder h3 {
     margin: 0 0 0.5rem 0;
     font-size: 1rem;
     font-weight: 500;
-    color: rgba(255, 255, 255, 0.9);
+    color: var(--text-primary);
   }
 
   .undefined-message {
-    background: rgba(255, 200, 100, 0.1);
-    border: 1px solid rgba(255, 200, 100, 0.3);
+    background: var(--warning-bg);
+    border: 1px solid var(--warning-border);
     border-radius: 8px;
     padding: 2rem;
-    color: rgba(255, 200, 100, 0.9);
+    color: var(--warning-text);
     font-style: italic;
     text-align: center;
   }

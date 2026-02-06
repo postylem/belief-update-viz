@@ -54,18 +54,19 @@ export function computeSurprisal(prior, likelihood, logBase = 2) {
 }
 
 /**
- * Compute KL divergence D_KL(posterior || prior)
- * @param {number[]} posterior - Posterior distribution
- * @param {number[]} prior - Prior distribution
+/**
+ * Compute KL divergence D_KL(P || Q) = E_P[log(P/Q)]
+ * @param {number[]} p - First distribution (as probabilities over same support)
+ * @param {number[]} q - Second distribution (as probabilities over same support)
  * @param {number} logBase - Base for logarithm (2 for bits, Math.E for nats)
  * @returns {number} - KL divergence value
  */
-export function computeKL(posterior, prior, logBase = 2) {
-  if (posterior === null) return NaN;
-  if (posterior.some((p, i) => p > 0 && prior[i] === 0)) return Infinity;
+export function computeKL(p, q, logBase = 2) {
+  if (p === null) return NaN;
+  if (p.some((p, i) => p > 0 && q[i] === 0)) return Infinity;
 
-  const kl = posterior.reduce((acc, p, i) =>
-    acc + (p > 0 ? p * Math.log(p / prior[i]) : 0)
+  const kl = p.reduce((acc, p, i) =>
+    acc + (p > 0 ? p * Math.log(p / q[i]) : 0)
   , 0);
   return kl / Math.log(logBase);
 }

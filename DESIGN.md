@@ -2,7 +2,7 @@
 
 ## Overview
 
-An interactive browser-based visualization demonstrating Bayesian belief updating over discrete probability distributions. Users manipulate prior beliefs and likelihood functions via draggable bars, observing in real-time how the posterior distribution changes and how the information-theoretic surprisal decomposes into KL divergence and a residual term.
+An interactive browser-based visualization demonstrating Bayesian belief updating over discrete probability distributions. Users manipulate prior beliefs and likelihood functions via draggable bars, observing in real-time how the posterior distribution changes and how the information-theoretic surprisal decomposes into KL divergence and a residual 'reconstruction information' term.
 
 ## Mathematical Foundation
 
@@ -33,9 +33,9 @@ $$\underbrace{-\log \mathbb{E}_{p_Z}[p(u \mid Z)]}_{\text{surprisal}(u)} = \unde
 Where:
 - **Surprisal**: $-\log p(u)$ — how unexpected the observation was under our prior predictive distribution
 - **KL Divergence**: $D_{\mathrm{KL}}(p_{Z|u} \| p_Z)$ — how much our beliefs shifted due to the observation
-- **R (Residual)**: $\mathbb{E}_{p_{Z|u}}[-\log p(u|Z)]$ — expected surprisal of the likelihood under the posterior
+- **R (Reconstruction Information)**: $\mathbb{E}_{p_{Z|u}}[-\log p(u|Z)]$ — expected surprisal of the likelihood under the posterior
 
-This decomposition shows that the total surprisal of an observation splits into two components: the information gained about $Z$ (KL) and the residual uncertainty about the observation mechanism (R).
+This decomposition shows that the total surprisal of an observation splits into two components: the information gained about $Z$ (KL) and the residual 'reconstruction information' (R).
 
 ## Features
 
@@ -123,7 +123,7 @@ src/
 - `computeMarginalLikelihood(prior, likelihood)` — evidence $p(u)$
 - `computeSurprisal(prior, likelihood, logBase)` — $-\log p(u)$
 - `computeKL(posterior, prior, logBase)` — KL divergence
-- `computeR(posterior, likelihood, logBase)` — residual term
+- `computeR(posterior, likelihood, logBase)` — reconstruction information term
 - `computeAll(...)` — returns all derived quantities
 
 ## Edge Cases

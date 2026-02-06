@@ -30,12 +30,17 @@
     inputValues = values.map(v => formatNumber(v, 4));
   });
 
-  // Dimensions
-  const margin = { top: 30, right: 60, bottom: 20, left: 80 };
+  // Dimensions - responsive margins
+  let margin = $derived(
+    width < 200
+      ? { top: 24, right: 40, bottom: 16, left: 50 }
+      : { top: 30, right: 60, bottom: 20, left: 80 }
+  );
 
-  // Compute chart dimensions
+  // Compute chart dimensions - larger bars for <= 3 items
+  let barHeight = $derived(values.length <= 3 ? 32 : 24);
   let chartWidth = $derived(width - margin.left - margin.right);
-  let chartHeight = $derived(Math.max(values.length * 40, 100));
+  let chartHeight = $derived(Math.max(values.length * barHeight, 80));
 
   // Scales
   let xScale = $derived(
@@ -48,7 +53,7 @@
     d3.scaleBand()
       .domain(labels.length ? labels : values.map((_, i) => `State ${i + 1}`))
       .range([0, chartHeight])
-      .padding(0.2)
+      .padding(0.12)
   );
 
   // Log scale for slider mapping (when useLogScale is true)
@@ -120,18 +125,50 @@
   // Drag state
   let dragging = $state(false);
   let dragIndex = $state(-1);
+  let dragStartX = $state(0);
+  let dragStartSliderPos = $state(0); // Position in 0-1 slider space
+
+  // Convert value to slider position (0-1)
+  function valueToSliderPos(value) {
+    if (useLogScale && minValue > 0) {
+      return logToLinear(value, minValue, maxValue);
+    }
+    return value / maxValue;
+  }
+
+  // Convert slider position (0-1) to value
+  function sliderPosToValue(pos) {
+    if (useLogScale && minValue > 0) {
+      return linearToLog(pos, minValue, maxValue);
+    }
+    return pos * maxValue;
+  }
 
   function startDrag(index, event) {
     if (!editable) return;
+    const rect = container.getBoundingClientRect();
     dragging = true;
     dragIndex = index;
-    handleDrag(index, event);
+    dragStartX = event.clientX - rect.left - margin.left;
+    dragStartSliderPos = valueToSliderPos(values[index]);
   }
 
   function onMouseMove(event) {
     if (dragging && dragIndex >= 0) {
-      handleDrag(dragIndex, event);
+      handleRelativeDrag(dragIndex, event);
     }
+  }
+
+  function handleRelativeDrag(index, event) {
+    const rect = container.getBoundingClientRect();
+    const currentX = event.clientX - rect.left - margin.left;
+    const deltaX = currentX - dragStartX;
+    const deltaRatio = deltaX / chartWidth;
+
+    // Move in slider space (constant sensitivity)
+    const newSliderPos = clamp(dragStartSliderPos + deltaRatio, 0, 1);
+    const newValue = clamp(sliderPosToValue(newSliderPos), minValue, maxValue);
+    updateValue(index, newValue);
   }
 
   function endDrag() {
@@ -177,7 +214,7 @@
 <svelte:window onmousemove={onMouseMove} onmouseup={endDrag} />
 
 <div class="distribution-chart" bind:this={container}>
-  <h3>
+  <h3 style="padding-left: {margin.left}px;">
     {#if titleTex}
       <span bind:this={titleEl}></span>
     {:else}
@@ -229,7 +266,6 @@
             y={y}
             width={chartWidth}
             height={barHeight}
-            fill="rgba(255,255,255,0.05)"
             class="bar-bg"
             onmousedown={(e) => startDrag(i, e)}
           />
@@ -256,7 +292,6 @@
             y={y}
             width="8"
             height={barHeight}
-            fill="rgba(255,255,255,0.3)"
             class="drag-handle"
             onmousedown={(e) => startDrag(i, e)}
           />
@@ -298,7 +333,7 @@
         y1={chartHeight}
         x2={chartWidth}
         y2={chartHeight}
-        stroke="rgba(255,255,255,0.2)"
+        class="axis"
       />
     </g>
   </svg>
@@ -307,14 +342,14 @@
 <style>
   .distribution-chart {
     flex: 1;
-    min-width: 250px;
+    min-width: 0;
   }
 
   h3 {
     margin: 0 0 0.5rem 0;
     font-size: 1rem;
     font-weight: 500;
-    color: rgba(255, 255, 255, 0.9);
+    color: var(--text-primary);
   }
 
   svg {
@@ -327,7 +362,7 @@
 
   .label {
     font-size: 12px;
-    fill: rgba(255, 255, 255, 0.8);
+    fill: var(--text-muted);
   }
 
   .bar {
@@ -340,12 +375,18 @@
 
   .bar-bg {
     cursor: ew-resize;
+    fill: var(--bar-bg);
   }
 
   .drag-handle {
     cursor: ew-resize;
     opacity: 0;
+    fill: var(--handle-color);
     transition: opacity 0.15s ease;
+  }
+
+  .axis {
+    stroke: var(--axis-color);
   }
 
   svg.editable:hover .drag-handle {
@@ -354,16 +395,16 @@
 
   .value {
     font-size: 11px;
-    fill: rgba(255, 255, 255, 0.7);
+    fill: var(--text-muted);
   }
 
   .value-input {
     width: 100%;
     height: 100%;
-    background: rgba(255, 255, 255, 0.1);
-    border: 1px solid rgba(255, 255, 255, 0.2);
+    background: var(--input-bg);
+    border: 1px solid var(--border-default);
     border-radius: 3px;
-    color: rgba(255, 255, 255, 0.9);
+    color: var(--text-primary);
     font-size: 10px;
     padding: 2px 4px;
     text-align: right;
@@ -371,8 +412,8 @@
 
   .value-input:focus {
     outline: none;
-    border-color: rgba(255, 255, 255, 0.4);
-    background: rgba(255, 255, 255, 0.15);
+    border-color: var(--border-strong);
+    background: var(--input-bg-hover);
   }
 
   .drag-area {
