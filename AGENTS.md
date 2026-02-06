@@ -23,13 +23,23 @@ All state lives in `App.svelte`. The core reactive loop:
 
 ### Key Files
 
-- **`src/lib/math.js`** - Pure functions for Bayesian computations. `computeAll(prior, likelihood, logBase)` is the main entry point returning `{posterior, kl, surprisal, r, marginalLikelihood}`.
+- **`src/lib/math.js`** - Pure functions for Bayesian computations. `computeAll(prior, likelihood, logBase)` for discrete, `computeAllContinuous(prior, likelihood, logBase, dz)` for continuous. Also exports `normalizeDensity`, `trapz`.
 
-- **`src/lib/presets.js`** - Distribution generators (uniform, iidUniform, iidLogUniform, iidBernoulli). Each returns an array of the requested size.
+- **`src/lib/presets.js`** - Discrete distribution generators (uniform, iidUniform, iidLogUniform, iidBernoulli). Each returns an array of the requested size.
+
+- **`src/lib/continuousPresets.js`** - Parametric PDF generators for continuous mode. Exports `priorPresets` and `likelihoodPresets` arrays with `{ name, family, defaultParams, paramDefs, generator }`.
+
+- **`src/lib/interpolation.js`** - Monotone cubic (Fritsch-Carlson) interpolation. `interpolateMonotone(xs, ys, evalXs)` preserves non-negativity.
 
 - **`src/lib/colors.js`** - HSL color functions. `priorColor(value)` → red, `likelihoodColor(value)` → blue, `posteriorColor(value, prior, lik)` → purple with hue varying by contribution ratio.
 
-- **`src/components/DistributionChart.svelte`** - Reusable horizontal bar chart. Accepts `values` (bindable), `colorFn`, `editable`, `isPrior` (triggers auto-normalization), `useLogScale`. Uses D3 for scales only; bars rendered declaratively in Svelte.
+- **`src/components/DistributionChart.svelte`** - Discrete: horizontal bar chart. Accepts `values` (bindable), `colorFn`, `editable`, `isPrior` (triggers auto-normalization), `useLogScale`.
+
+- **`src/components/CurveChart.svelte`** - Continuous: SVG area chart with draggable control points. Accepts `controlPointYs` (bindable), `gridValues`, `gridX`, `editable`, `colorFn`.
+
+- **`src/components/ContinuousControls.svelte`** - Continuous: preset selectors, parameter sliders, free-edit toggle, control point count.
+
+- **`src/ContinuousApp.svelte`** - Main app for continuous mode. State: control point arrays, preset indices, params. Derives grid via interpolation, computes posterior via `computeAllContinuous`.
 
 ### Math Identity
 

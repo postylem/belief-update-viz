@@ -112,6 +112,88 @@ export function computeAll(prior, likelihood, logBase = 2) {
   };
 }
 
+// ---- Continuous (density) versions ----
+
+/**
+ * Normalize an array so that its trapezoidal integral equals 1
+ * @param {number[]} arr - Array of density values on a uniform grid
+ * @param {number} dz - Grid spacing
+ * @returns {number[]|null} - Normalized density array, or null if integral is 0
+ */
+export function normalizeDensity(arr, dz) {
+  const integral = trapz(arr, dz);
+  if (integral === 0) return null;
+  return arr.map(v => v / integral);
+}
+
+/**
+ * Trapezoidal integration of an array with uniform spacing
+ * @param {number[]} arr - Array of values
+ * @param {number} dz - Grid spacing
+ * @returns {number} - Approximate integral
+ */
+export function trapz(arr, dz) {
+  if (arr.length < 2) return 0;
+  let sum = (arr[0] + arr[arr.length - 1]) / 2;
+  for (let i = 1; i < arr.length - 1; i++) {
+    sum += arr[i];
+  }
+  return sum * dz;
+}
+
+/**
+ * Compute all derived quantities for continuous distributions
+ * Uses trapezoidal integration on a uniform grid
+ * @param {number[]} prior - Prior density values on grid (should integrate to 1)
+ * @param {number[]} likelihood - Likelihood values on grid
+ * @param {number} logBase - Base for logarithm
+ * @param {number} dz - Grid spacing
+ * @returns {object} - { posterior, kl, surprisal, r, marginalLikelihood }
+ */
+export function computeAllContinuous(prior, likelihood, logBase, dz) {
+  // Marginal likelihood: integral of prior * likelihood
+  const unnormPost = prior.map((p, i) => p * likelihood[i]);
+  const marginalLikelihood = trapz(unnormPost, dz);
+
+  // Posterior
+  const posterior = marginalLikelihood > 0
+    ? unnormPost.map(v => v / marginalLikelihood)
+    : null;
+
+  // Surprisal
+  const surprisal = marginalLikelihood > 0
+    ? -Math.log(marginalLikelihood) / Math.log(logBase)
+    : Infinity;
+
+  // KL divergence: integral of post * log(post/prior) dz
+  let kl = NaN;
+  if (posterior) {
+    if (posterior.some((p, i) => p > 0 && prior[i] === 0)) {
+      kl = Infinity;
+    } else {
+      const integrand = posterior.map((p, i) =>
+        p > 0 ? p * Math.log(p / prior[i]) : 0
+      );
+      kl = trapz(integrand, dz) / Math.log(logBase);
+    }
+  }
+
+  // R: integral of post * (-log lik) dz
+  let r = NaN;
+  if (posterior) {
+    if (posterior.some((p, i) => p > 0 && likelihood[i] === 0)) {
+      r = Infinity;
+    } else {
+      const integrand = posterior.map((p, i) =>
+        p > 0 ? p * -Math.log(likelihood[i]) : 0
+      );
+      r = trapz(integrand, dz) / Math.log(logBase);
+    }
+  }
+
+  return { posterior, marginalLikelihood, surprisal, kl, r };
+}
+
 /**
  * Clamp a value to a range
  * @param {number} value - Value to clamp

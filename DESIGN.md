@@ -93,20 +93,28 @@ Pre-configured distributions for exploration:
 
 ```
 src/
-├── main.js                 # App entry point
-├── App.svelte              # Main component, state management
+├── main.js                 # Discrete app entry point
+├── App.svelte              # Discrete app, state management
+├── continuousMain.js       # Continuous app entry point
+├── ContinuousApp.svelte    # Continuous app, state management
 ├── lib/
-│   ├── math.js             # Bayesian computations (pure functions)
-│   ├── presets.js          # Distribution generators
+│   ├── math.js             # Bayesian computations (discrete + continuous)
+│   ├── presets.js          # Discrete distribution generators
+│   ├── continuousPresets.js # Continuous PDF generators
+│   ├── interpolation.js    # Monotone cubic interpolation
 │   └── colors.js           # HSL color functions
 ├── components/
-│   ├── DistributionChart.svelte   # Editable/display bar chart
-│   ├── SurprisalBar.svelte        # KL + R decomposition bar
-│   ├── EquationDisplay.svelte     # KaTeX equation rendering
-│   ├── Controls.svelte            # Presets, toggles, settings
-│   └── ConfigPanel.svelte         # State labels, epsilon config
+│   ├── DistributionChart.svelte   # Discrete: editable bar chart
+│   ├── CurveChart.svelte          # Continuous: SVG area chart
+│   ├── ContinuousControls.svelte  # Continuous: preset + param controls
+│   ├── SurprisalBar.svelte        # Shared: KL + R decomposition bar
+│   ├── EquationDisplay.svelte     # Shared: KaTeX equation rendering
+│   ├── Controls.svelte            # Discrete: presets, toggles
+│   └── ConfigPanel.svelte         # Discrete: labels, epsilon config
 └── styles/
-    └── global.css          # Base styles, dark theme
+    └── global.css          # Base styles, themes
+continuous.html             # Continuous page entry
+index.html                  # Discrete page entry
 ```
 
 ### Data Flow
@@ -143,10 +151,75 @@ When "Allow zeroes" is ON:
   - Posterior positive where prior zero → KL = $\infty$
   - Posterior positive where likelihood zero → R = $\infty$
 
+## Continuous Version
+
+A separate page (`/continuous.html`) visualizing Bayesian belief updating over a continuous latent variable $Z \in [0, 1]$, where prior and likelihood are functions (densities/curves) rather than discrete bars.
+
+### Mathematical Adaptation
+
+The same surprisal identity holds, with sums replaced by integrals:
+
+$$\underbrace{-\log \int f_Z(z) \, p(u \mid z) \, dz}_{\text{surprisal}(u)} = \underbrace{D_{\mathrm{KL}}(f_{Z|u} \,\|\, f_Z)}_{D_{\mathrm{KL}}} + \underbrace{\mathbb{E}_{f_{Z|u}}[-\log p(u \mid Z)]}_{R(u)}$$
+
+All integrals are computed numerically via trapezoidal rule on a fine grid of 300 points.
+
+### Representation
+
+Two-layer approach:
+- **Editing layer**: ~15 control points with y-values the user drags vertically. X-positions evenly spaced across the domain.
+- **Computation layer**: Control points are interpolated onto a 300-point grid via monotone cubic (Fritsch-Carlson) interpolation, preserving non-negativity.
+
+### Interaction Modes
+
+1. **Parametric mode** (default): User selects a distribution family (Gaussian, Beta, Uniform, Bimodal, Peaked) and adjusts parameters via sliders. Sliders regenerate control points in real time.
+2. **Free-edit mode**: User drags control points directly. Entering free-edit detaches from parametric sliders. A "Reset to parametric" button re-applies slider values.
+
+### Prior Constraints
+- Auto-renormalized so density integrates to 1
+- Non-negativity enforced (control points clamped to ≥ 0)
+
+### Likelihood
+- No normalization constraint (it's $p(u|z)$, not a density in $z$)
+- Non-negative, y-axis can exceed 1
+
+### Presets
+
+**Prior presets**: Uniform, Gaussian, Beta, Bimodal, Peaked
+**Likelihood presets**: Uniform, Gaussian, Step, Linear, Peaked
+
+### Architecture
+
+Separate entry point sharing core math and color utilities:
+
+```
+src/
+├── continuousMain.js          # Entry point
+├── ContinuousApp.svelte       # App shell with state management
+├── lib/
+│   ├── interpolation.js       # Monotone cubic interpolation
+│   └── continuousPresets.js   # Parametric PDF generators
+├── components/
+│   ├── CurveChart.svelte          # SVG area chart with control points
+│   └── ContinuousControls.svelte  # Preset selectors + param sliders
+continuous.html                     # HTML entry
+```
+
+Shared with discrete version: `math.js`, `colors.js`, `SurprisalBar.svelte`, `EquationDisplay.svelte`, `global.css`.
+
+### Rendering
+
+- SVG area charts with D3 `d3.area()` path generators
+- Three side-by-side charts: Prior density, Likelihood, Posterior density
+- Solid color fills at moderate opacity with colored stroke
+- Draggable control point circles on editable charts
+- Posterior chart is read-only
+
 ## Design Decisions
 
-- **Horizontal bars**: Probability on x-axis, states on y-axis — reads naturally
+- **Horizontal bars** (discrete): Probability on x-axis, states on y-axis — reads naturally
+- **Vertical area charts** (continuous): Standard math convention — z on x-axis, density on y-axis
 - **Instant updates**: No CSS transitions on data changes for responsive feel
 - **Dark theme option**: Reduces eye strain, good contrast for colored bars, but also works in light theme.
 - **KaTeX everywhere**: Consistent mathematical typography
 - **Functional style**: Pure computation functions, array methods over loops
+- **Multi-page architecture**: Discrete and continuous versions are separate pages sharing core utilities, allowing each to evolve independently

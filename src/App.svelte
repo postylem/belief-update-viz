@@ -162,13 +162,16 @@
 <main>
   <header>
     <h1>Bayesian Belief Update</h1>
-    <button
-      class="theme-toggle"
-      onclick={() => lightTheme = !lightTheme}
-      title={lightTheme ? 'Switch to dark theme' : 'Switch to light theme'}
-    >
-      {lightTheme ? '⏾' : '☀︎'}
-    </button>
+    <div class="header-actions">
+      <a href="/continuous.html" class="nav-link">Continuous version</a>
+      <button
+        class="theme-toggle"
+        onclick={() => lightTheme = !lightTheme}
+        title={lightTheme ? 'Switch to dark theme' : 'Switch to light theme'}
+      >
+        {lightTheme ? '⏾' : '☀︎'}
+      </button>
+    </div>
   </header>
 
   <Controls
@@ -286,6 +289,27 @@
     margin: 0;
     font-weight: 600;
     color: var(--text-primary);
+  }
+
+  .header-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  .nav-link {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    text-decoration: none;
+    padding: 0.5rem 0.75rem;
+    border-radius: 6px;
+    border: 1px solid var(--border-default);
+    background: var(--bg-surface);
+  }
+
+  .nav-link:hover {
+    color: var(--text-primary);
+    background: var(--bg-surface-hover);
   }
 
   .theme-toggle {
