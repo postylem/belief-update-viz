@@ -80,13 +80,8 @@
     return line(gridValues);
   });
 
-  // Get fill color at midpoint density
-  let fillColor = $derived.by(() => {
-    const midIdx = Math.floor(gridValues.length / 2);
-    const midVal = gridValues[midIdx] || 0;
-    const normVal = effectiveYMax > 0 ? clamp(midVal / effectiveYMax, 0, 1) : 0;
-    return colorFn(normVal);
-  });
+  // Fixed fill color for the area under the curve
+  let fillColor = $derived(colorFn(0.5));
 
   let strokeColor = $derived.by(() => {
     return colorFn(0.8);
