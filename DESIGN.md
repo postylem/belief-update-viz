@@ -45,7 +45,35 @@ Where:
 
 This decomposition shows that the total surprisal of an observation splits into two components: the information gained about $Z$ (KL) and the residual 'reconstruction information' (R).
 
-In the continuous case, sums become integrals and all quantities are computed numerically via trapezoidal rule on a fine grid of 300 points.
+### Computation Methods
+
+**Discrete case — exact arithmetic** (`computeAll` in `src/lib/math.js`):
+
+With finite support $\{z_1, \ldots, z_n\}$, every expectation and divergence reduces to a finite sum over the $n$ states. These sums are computed directly with no approximation:
+
+- Marginal likelihood: $p(u) = \sum_i \operatorname{lik}_u(z_i) \, p(z_i)$ — a dot product (`computeMarginalLikelihood`)
+- Posterior: $p(z_i \mid u) = \frac{\operatorname{lik}_u(z_i) \, p(z_i)}{p(u)}$ — elementwise multiply and normalize (`computePosterior`)
+- KL: $\sum_i p(z_i \mid u) \log \frac{p(z_i \mid u)}{p(z_i)}$ — weighted sum (`computeKL`)
+- R: $\sum_i p(z_i \mid u) \bigl[-\log \operatorname{lik}_u(z_i)\bigr]$ — weighted sum (`computeR`)
+
+The only source of error is floating-point precision.
+
+**Continuous case — numerical integration** (`computeAllContinuous` in `src/lib/math.js`):
+
+With a continuous density over $[0,1]$, sums become integrals. We discretize the domain onto a uniform grid of $N = 300$ points with spacing $\Delta z = 1/(N-1)$ and approximate each integral using the **composite trapezoidal rule** (`trapz`):
+
+$$\int_0^1 g(z)\,dz \;\approx\; \Delta z \left[\tfrac{g(z_0)}{2} + g(z_1) + g(z_2) + \cdots + g(z_{N-2}) + \tfrac{g(z_{N-1})}{2}\right]$$
+
+This weights the two boundary values by $\frac{1}{2}$ and all interior values by $1$, then multiplies by $\Delta z$. It is second-order accurate: the global error is $O(\Delta z^2)$, so with 300 points the approximation is accurate to roughly $10^{-5}$. See [Composite trapezoidal rule — Wikipedia](https://en.wikipedia.org/wiki/Trapezoidal_rule#Composite_trapezoidal_rule) for a derivation and error analysis.
+
+Each continuous quantity is computed by forming the appropriate integrand array and passing it to `trapz`:
+
+- Marginal likelihood: $p(u) = \int \operatorname{lik}_u(z) \, f_Z(z) \, dz$ — `trapz` of the elementwise product
+- Posterior density: $f_{Z|u}(z) = \frac{\operatorname{lik}_u(z) \, f_Z(z)}{p(u)}$ — divide unnormalized product by the scalar marginal likelihood
+- KL: $\int f_{Z|u}(z) \log \frac{f_{Z|u}(z)}{f_Z(z)} \, dz$ — `trapz` of the pointwise KL integrand
+- R: $\int f_{Z|u}(z) [-\log \operatorname{lik}_u(z)] \, dz$ — `trapz` of the pointwise R integrand
+
+Density normalization (`normalizeDensity`) also uses `trapz` to ensure the prior integrates to 1.
 
 ## Features
 

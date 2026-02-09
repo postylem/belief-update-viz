@@ -115,6 +115,9 @@
 
   const SINGLE_POINT_THRESHOLD = 7;  // pixels: within this = directly on point
 
+  // Hover influence preview
+  let hoverWeights = $state([]);
+
   function handleChartPointerDown(event) {
     if (!editable || controlPointYs.length === 0) return;
 
@@ -154,6 +157,9 @@
       const pixelsPerPoint = chartWidth / Math.max(1, controlPointYs.length - 1);
       influenceSigma = (yOffset - SINGLE_POINT_THRESHOLD) / pixelsPerPoint * 0.8;
     }
+
+    // Show influence weights during drag
+    hoverWeights = weightsFromSigma(nearestIdx, influenceSigma);
   }
 
   function onPointerMove(event) {
@@ -190,6 +196,66 @@
     influenceSigma = 0;
     dragInitialYs = [];
     dragStartVal = 0;
+    hoverWeights = [];
+  }
+
+  // Compute weights from a center index and sigma (used by both hover and drag)
+  function weightsFromSigma(centerIdx, sigma) {
+    return controlPointYs.map((_, i) => {
+      const d = Math.abs(i - centerIdx);
+      if (d === 0) return 1;
+      if (sigma === 0) return 0;
+      const twoSigmaSq = 2 * sigma * sigma;
+      const w = Math.exp(-(d * d) / twoSigmaSq);
+      return w < 0.001 ? 0 : w;
+    });
+  }
+
+  // Compute influence weights for a given mouse position
+  function computeInfluenceWeights(mouseX, mouseY) {
+    let nearestIdx = 0;
+    let minDist = Infinity;
+    controlPointXs.forEach((cx, i) => {
+      const dist = Math.abs(mouseX - xScale(cx));
+      if (dist < minDist) {
+        minDist = dist;
+        nearestIdx = i;
+      }
+    });
+
+    const pointPixelY = yScale(Math.max(0, controlPointDisplayYs[nearestIdx]));
+    const yOffset = Math.abs(mouseY - pointPixelY);
+
+    let sigma;
+    if (yOffset < SINGLE_POINT_THRESHOLD) {
+      sigma = 0;
+    } else {
+      const pixelsPerPoint = chartWidth / Math.max(1, controlPointYs.length - 1);
+      sigma = (yOffset - SINGLE_POINT_THRESHOLD) / pixelsPerPoint * 0.8;
+    }
+
+    return weightsFromSigma(nearestIdx, sigma);
+  }
+
+  function handleChartPointerMove(event) {
+    if (dragging || !editable || controlPointYs.length === 0) return;
+
+    const svgRect = svgEl.getBoundingClientRect();
+    const mouseX = event.clientX - svgRect.left - margin.left;
+    const mouseY = event.clientY - svgRect.top - margin.top;
+
+    if (mouseX < 0 || mouseX > chartWidth || mouseY < 0 || mouseY > chartHeight + 5) {
+      hoverWeights = [];
+      return;
+    }
+
+    hoverWeights = computeInfluenceWeights(mouseX, mouseY);
+  }
+
+  function handleChartPointerLeave() {
+    if (!dragging) {
+      hoverWeights = [];
+    }
   }
 
   // Resize observer
@@ -235,6 +301,8 @@
     {height}
     class:editable
     onpointerdown={handleChartPointerDown}
+    onpointermove={handleChartPointerMove}
+    onpointerleave={handleChartPointerLeave}
   >
     <g transform="translate({margin.left}, {margin.top})">
       <!-- Y-axis grid lines -->
@@ -282,8 +350,9 @@
             class="control-point"
             class:active={dragging && dragIndex === i && influenceSigma === 0}
             fill={strokeColor}
-            fill-opacity="0.7"
-            stroke="var(--bg-primary)"
+            fill-opacity={0.45 + (hoverWeights[i] || 0) * 0.55}
+            stroke={strokeColor}
+            stroke-opacity={0.15 + (hoverWeights[i] || 0) * 0.85}
             stroke-width="1.5"
           />
         {/each}
