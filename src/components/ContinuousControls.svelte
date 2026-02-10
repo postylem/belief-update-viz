@@ -13,6 +13,7 @@
     likParams = $bindable({}),
     priorFreeEdit = $bindable(false),
     likFreeEdit = $bindable(false),
+    likControlYs = $bindable([]),
     numControlPoints = $bindable(30),
     logBase = $bindable(2),
     onApplyPriorPreset = () => {},
@@ -21,6 +22,37 @@
   } = $props();
 
   let unit = $derived(logBase === 2 ? 'bits' : 'nats');
+
+  // Likelihood scale slider
+  let scaleFactor = $state(1);
+  let scaleSnapshot = $state([]);
+  let scaleDragging = $state(false);
+  let scaleMaxAtStart = $state(10);
+
+  let scaleMax = $derived.by(() => {
+    if (scaleDragging) return scaleMaxAtStart;
+    const maxLik = Math.max(...likControlYs, 1e-12);
+    return 1 / maxLik;
+  });
+
+  function onScaleStart() {
+    scaleDragging = true;
+    scaleSnapshot = [...likControlYs];
+    scaleMaxAtStart = 1 / Math.max(...likControlYs, 1e-12);
+  }
+
+  function onScaleInput(event) {
+    if (!scaleDragging) onScaleStart();
+    scaleFactor = parseFloat(event.target.value);
+    likControlYs = scaleSnapshot.map(v => Math.min(1, Math.max(0, v * scaleFactor)));
+    likFreeEdit = true;
+  }
+
+  function onScaleEnd() {
+    scaleFactor = 1;
+    scaleDragging = false;
+    scaleSnapshot = [];
+  }
 
   function handlePriorPresetChange(event) {
     const idx = parseInt(event.target.value);
@@ -128,6 +160,21 @@
       <div class="free-edit-badge" class:hidden={!likFreeEdit}>
         <span>Free editing</span>
         <button class="reset-parametric" onclick={resetLikToParametric}>Reset to parametric</button>
+      </div>
+      <div class="param-slider">
+        <label class="scale-slider">
+          Scale likelihood
+          <input
+            type="range"
+            min="0.01"
+            max={scaleMax}
+            step="0.001"
+            value={scaleFactor}
+            oninput={onScaleInput}
+            onpointerdown={onScaleStart}
+            onpointerup={onScaleEnd}
+          />
+        </label>
       </div>
     </div>
 

@@ -145,7 +145,7 @@ Two-layer approach:
 - **Color coding**:
   - Prior: red hues (saturation varies with value)
   - Likelihood: blue hues
-  - Posterior: purple hues (hue varies by prior/likelihood contribution ratio)
+  - Posterior: purple hues (redder when the prior supports the state's mass, bluer when the likelihood does; measured by |log| penalty from each factor)
   - KL segment: purple
   - R segment: teal
 

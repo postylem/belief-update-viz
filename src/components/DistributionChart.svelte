@@ -1,6 +1,6 @@
 <script>
   import { onMount } from 'svelte';
-  import * as d3 from 'd3';
+  import { scaleLinear, scaleBand } from 'd3';
   import katex from 'katex';
   import { clamp, formatNumber } from '../lib/math.js';
 
@@ -30,12 +30,27 @@
     inputValues = values.map(v => formatNumber(v, 4));
   });
 
-  // Dimensions - responsive margins
-  let margin = $derived(
-    width < 200
-      ? { top: 24, right: 40, bottom: 16, left: 50 }
-      : { top: 30, right: 60, bottom: 20, left: 80 }
-  );
+  // Measure actual label widths to set left margin dynamically
+  let labelMeasureEl = $state(null);
+  let measuredLabelWidth = $derived.by(() => {
+    if (!labelMeasureEl) return 30;
+    const effectiveLabels = labels.length ? labels : values.map((_, i) => `State ${i + 1}`);
+    let maxW = 0;
+    for (const label of effectiveLabels) {
+      labelMeasureEl.textContent = label;
+      const w = labelMeasureEl.getComputedTextLength();
+      if (w > maxW) maxW = w;
+    }
+    return Math.ceil(maxW);
+  });
+
+  // Dimensions - left margin adapts to label width
+  let margin = $derived({
+    top: 4,
+    right: editable ? 56 : 40,
+    bottom: 8,
+    left: measuredLabelWidth + 12,
+  });
 
   // Compute chart dimensions - larger bars for <= 3 items
   let barHeight = $derived(values.length <= 3 ? 32 : 24);
@@ -44,13 +59,13 @@
 
   // Scales
   let xScale = $derived(
-    d3.scaleLinear()
+    scaleLinear()
       .domain([0, maxValue])
       .range([0, chartWidth])
   );
 
   let yScale = $derived(
-    d3.scaleBand()
+    scaleBand()
       .domain(labels.length ? labels : values.map((_, i) => `State ${i + 1}`))
       .range([0, chartHeight])
       .padding(0.12)
@@ -211,14 +226,12 @@
   });
 </script>
 
-<svelte:window onmousemove={onMouseMove} onmouseup={endDrag} />
+<svelte:window onpointermove={onMouseMove} onpointerup={endDrag} />
 
 <div class="distribution-chart" bind:this={container}>
   <h3 style="padding-left: {margin.left}px;">
-    {#if titleTex}
-      <span bind:this={titleEl}></span>
-    {:else}
-      {title}
+    {title}{#if titleTex}
+      {' '}<span class="title-math" bind:this={titleEl}></span>
     {/if}
   </h3>
   <svg
@@ -226,6 +239,8 @@
     height={chartHeight + margin.top + margin.bottom}
     class:editable
   >
+    <!-- Hidden text element for measuring label widths -->
+    <text bind:this={labelMeasureEl} class="label" visibility="hidden" x="-9999" y="-9999"></text>
     <g transform="translate({margin.left}, {margin.top})">
       <!-- Background for drag area -->
       {#if editable}
@@ -267,7 +282,7 @@
             width={chartWidth}
             height={barHeight}
             class="bar-bg"
-            onmousedown={(e) => startDrag(i, e)}
+            onpointerdown={(e) => startDrag(i, e)}
           />
         {/if}
 
@@ -281,7 +296,7 @@
           fill={color}
           class="bar"
           class:dragging={dragging && dragIndex === i}
-          onmousedown={(e) => editable && startDrag(i, e)}
+          onpointerdown={(e) => editable && startDrag(i, e)}
         />
 
         <!-- Drag handle -->
@@ -293,7 +308,7 @@
             width="8"
             height={barHeight}
             class="drag-handle"
-            onmousedown={(e) => startDrag(i, e)}
+            onpointerdown={(e) => startDrag(i, e)}
           />
         {/if}
 
@@ -370,7 +385,7 @@
   }
 
   .bar.dragging {
-    filter: brightness(1.2);
+    /* no visual change on bar — only the handle highlights */
   }
 
   .bar-bg {

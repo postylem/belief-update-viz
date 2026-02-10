@@ -39,7 +39,7 @@ Interactive visualization of Bayesian belief updating built with Svelte 5 + D3 +
 
 - **`src/lib/interpolation.js`** - Monotone cubic (Fritsch-Carlson) interpolation. `interpolateMonotone(xs, ys, evalXs)` preserves non-negativity.
 
-- **`src/lib/colors.js`** - HSL color functions. `priorColor(value)` → red, `likelihoodColor(value)` → blue, `posteriorColor(value, prior, lik)` → purple with hue varying by contribution ratio.
+- **`src/lib/colors.js`** - HSL color functions. `priorColor(value)` → red, `likelihoodColor(value)` → blue, `posteriorColor(value, prior, lik)` → purple, redder when prior supports the state's mass, bluer when likelihood does.
 
 - **`src/components/DistributionChart.svelte`** - Discrete: horizontal bar chart. Accepts `values` (bindable), `colorFn`, `editable`, `isPrior` (triggers auto-normalization), `useLogScale`.
 

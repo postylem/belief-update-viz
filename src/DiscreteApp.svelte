@@ -2,7 +2,7 @@
   import { untrack } from 'svelte';
   import katex from 'katex';
   import { computeAll, normalize } from './lib/math.js';
-  import { uniform, uniformLikelihood } from './lib/presets.js';
+  import { uniform } from './lib/presets.js';
   import { priorColor, likelihoodColor, posteriorColor } from './lib/colors.js';
 
   import DistributionChart from './components/DistributionChart.svelte';
@@ -160,13 +160,13 @@
     {#if priorUndefined}
       <div class="chart-placeholder">
         <!-- eslint-disable-next-line svelte/no-at-html-tags -->
-        <h3>{@html tex(String.raw`\text{Prior } p(Z)`)}</h3>
+        <h3>Prior {@html tex(String.raw`p(Z)`)}</h3>
         <div class="undefined-message">Prior undefined (all values are zero)</div>
       </div>
     {:else}
       <DistributionChart
         title="Prior"
-        titleTex={String.raw`\text{Prior } p(Z)`}
+        titleTex={String.raw`p(Z)`}
         bind:values={prior}
         {labels}
         editable={true}
@@ -180,7 +180,7 @@
 
     <DistributionChart
       title="Likelihood"
-      titleTex={String.raw`\text{Likelihood } \operatorname{lik}_u(z) \coloneqq p(u \mid z)`}
+      titleTex={String.raw`\operatorname{lik}_u(z) \coloneqq p(u \mid z)`}
       bind:values={likelihood}
       {labels}
       editable={true}
@@ -194,7 +194,7 @@
     {#if posteriorUndefined}
       <div class="chart-placeholder">
         <!-- eslint-disable-next-line svelte/no-at-html-tags -->
-        <h3>{@html tex(String.raw`\text{Posterior } p(Z \mid u)`)}</h3>
+        <h3>Posterior {@html tex(String.raw`p(Z \mid u)`)}</h3>
         <div class="undefined-message">
           Posterior undefined
           {#if priorUndefined}
@@ -207,7 +207,7 @@
     {:else}
       <DistributionChart
         title="Posterior"
-        titleTex={String.raw`\text{Posterior } p(Z \mid u)`}
+        titleTex={String.raw`p(Z \mid u)`}
         values={posterior}
         {labels}
         editable={false}
@@ -252,12 +252,20 @@
   }
 
   .charts-container {
-    display: flex;
-    gap: 1rem;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    grid-template-rows: auto 1fr;
+    gap: 0 1rem;
+  }
+
+  .charts-container > :global(*) {
+    display: grid;
+    grid-row: span 2;
+    grid-template-rows: subgrid;
+    min-width: 0;
   }
 
   .chart-placeholder {
-    flex: 1;
     min-width: 0;
   }
 
@@ -270,7 +278,13 @@
 
   @media (max-width: 768px) {
     .charts-container {
+      grid-template-columns: 1fr;
       gap: 0.5rem;
+    }
+
+    .charts-container > :global(*) {
+      grid-row: auto;
+      display: block;
     }
   }
 

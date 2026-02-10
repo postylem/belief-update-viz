@@ -1,7 +1,7 @@
 <script>
   import katex from 'katex';
   import { formatNumber } from '../lib/math.js';
-  import { KL_COLOR, R_COLOR } from '../lib/colors.js';
+  import { KL_COLOR, R_COLOR, KL_COLOR_HEX, R_COLOR_HEX } from '../lib/colors.js';
 
   let {
     surprisal = 0,
@@ -49,7 +49,7 @@
   }
 
   // Generate tick marks at nice intervals
-  let ticks = $derived(() => {
+  let ticks = $derived.by(() => {
     const step = niceStep(effectiveMax);
     const tickValues = [];
 
@@ -101,9 +101,9 @@
     tooltipY = rect.top - 8;
 
     if (type === 'kl') {
-      tooltipContent = String.raw`{\color{#45a085}D_{\mathrm{KL}}} = ${klStr} \text{ ${unit}}`;
+      tooltipContent = String.raw`{\color{${KL_COLOR_HEX}}D_{\mathrm{KL}}} = ${klStr} \text{ ${unit}}`;
     } else {
-      tooltipContent = String.raw`{\color{#e87040}R} = ${rStr} \text{ ${unit}}`;
+      tooltipContent = String.raw`{\color{${R_COLOR_HEX}}R} = ${rStr} \text{ ${unit}}`;
     }
     tooltipVisible = true;
   }
@@ -147,7 +147,7 @@
         </div>
       </div>
       <div class="axis">
-        {#each ticks() as tick}
+        {#each ticks as tick}
           <div class="tick" style="left: {tick.percent}%;">
             <div class="tick-mark"></div>
             <span class="tick-label">{formatTick(tick.value)}</span>

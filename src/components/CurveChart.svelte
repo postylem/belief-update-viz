@@ -1,6 +1,6 @@
 <script>
   import { onMount } from 'svelte';
-  import * as d3 from 'd3';
+  import { scaleLinear, area as d3area, line as d3line, curveMonotoneX } from 'd3';
   import katex from 'katex';
   import { clamp } from '../lib/math.js';
 
@@ -20,8 +20,8 @@
 
   let container;
   let width = $state(400);
-  const height = 220;
-  const margin = { top: 30, right: 20, bottom: 36, left: 50 };
+  const height = 194;
+  const margin = { top: 4, right: 20, bottom: 36, left: 50 };
 
   let chartWidth = $derived(width - margin.left - margin.right);
   let chartHeight = $derived(height - margin.top - margin.bottom);
@@ -35,10 +35,10 @@
 
   // D3 scales
   let xScale = $derived(
-    d3.scaleLinear().domain(domain).range([0, chartWidth])
+    scaleLinear().domain(domain).range([0, chartWidth])
   );
   let yScale = $derived(
-    d3.scaleLinear().domain([0, effectiveYMax]).range([chartHeight, 0])
+    scaleLinear().domain([0, effectiveYMax]).range([chartHeight, 0])
   );
 
   // Control point x-coordinates
@@ -62,21 +62,21 @@
   // Generate area path from grid
   let areaPath = $derived.by(() => {
     if (gridValues.length === 0 || gridX.length === 0) return '';
-    const area = d3.area()
+    const area = d3area()
       .x((_, i) => xScale(gridX[i]))
       .y0(chartHeight)
       .y1((d) => yScale(Math.max(0, d)))
-      .curve(d3.curveMonotoneX);
+      .curve(curveMonotoneX);
     return area(gridValues);
   });
 
   // Line path (top of curve)
   let linePath = $derived.by(() => {
     if (gridValues.length === 0 || gridX.length === 0) return '';
-    const line = d3.line()
+    const line = d3line()
       .x((_, i) => xScale(gridX[i]))
       .y((d) => yScale(Math.max(0, d)))
-      .curve(d3.curveMonotoneX);
+      .curve(curveMonotoneX);
     return line(gridValues);
   });
 
@@ -90,13 +90,13 @@
   // X-axis ticks
   let xTicks = $derived.by(() => {
     const [a, b] = domain;
-    const tickGen = d3.scaleLinear().domain([a, b]).range([0, chartWidth]);
+    const tickGen = scaleLinear().domain([a, b]).range([0, chartWidth]);
     return tickGen.ticks(6).map(v => ({ value: v, x: xScale(v) }));
   });
 
   // Y-axis ticks
   let yTicks = $derived.by(() => {
-    const tickGen = d3.scaleLinear().domain([0, effectiveYMax]).range([chartHeight, 0]);
+    const tickGen = scaleLinear().domain([0, effectiveYMax]).range([chartHeight, 0]);
     return tickGen.ticks(4).map(v => ({ value: v, y: yScale(v) }));
   });
 
@@ -283,10 +283,8 @@
 
 <div class="curve-chart" bind:this={container}>
   <h3 style="padding-left: {margin.left}px;">
-    {#if titleTex}
-      <span bind:this={titleEl}></span>
-    {:else}
-      {title}
+    {title}{#if titleTex}
+      {' '}<span class="title-math" bind:this={titleEl}></span>
     {/if}
   </h3>
   <!-- svelte-ignore a11y_no_static_element_interactions -->

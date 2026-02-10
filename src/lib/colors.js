@@ -3,7 +3,8 @@
  *
  * Prior: Red hue, saturation varies with value
  * Likelihood: Blue hue, saturation varies with value
- * Posterior: Purple with hue varying based on log(prior)/log(likelihood) ratio
+ * Posterior: Purple with hue indicating which factor supports each state's mass —
+ *   redder when prior is responsible, bluer when likelihood is responsible
  */
 
 // Base hues (in HSL degrees)
@@ -52,7 +53,12 @@ export function likelihoodColor(value) {
 
 /**
  * Generate color for posterior distribution bar
- * Hue varies based on the ratio of log contributions from prior vs likelihood
+ * Hue indicates which factor supports this state's posterior mass:
+ *   - Redder (prior-colored) when the likelihood penalizes the state (is low),
+ *     meaning the prior is what keeps the state alive
+ *   - Bluer (likelihood-colored) when the prior penalizes the state (is low),
+ *     meaning the likelihood is what supports the state's mass
+ * Uses |log| distance from 1 as the penalty measure for each factor.
  *
  * @param {number} posteriorValue - Posterior probability value [0,1]
  * @param {number} priorValue - Prior probability value [0,1]
@@ -65,18 +71,18 @@ export function posteriorColor(posteriorValue, priorValue, likelihoodValue) {
   const logPrior = Math.log(Math.max(priorValue, epsilon));
   const logLik = Math.log(Math.max(likelihoodValue, epsilon));
 
-  // Ratio: what fraction of the log-posterior comes from the prior?
-  // log(posterior) ∝ log(prior) + log(lik)
-  // We want: priorContribution / (priorContribution + likContribution)
-  // But logs are negative, so we use absolute values
+  // Which factor is "supporting" this state's posterior mass?
+  // |log(x)| is large when x is small (penalizing the state) and 0 when x = 1 (neutral).
+  // The factor with the SMALLER |log| is the one keeping the state alive.
+  // So priorRatio = |log(lik)| / total: when likelihood is extreme (penalizing),
+  // prior must be responsible → red. When prior is extreme, likelihood helps → blue.
   const absLogPrior = Math.abs(logPrior);
   const absLogLik = Math.abs(logLik);
   const total = absLogPrior + absLogLik;
 
   let priorRatio = 0.5; // Default to middle
   if (total > epsilon) {
-    // Higher priorRatio means prior dominates
-    priorRatio = absLogPrior / total;
+    priorRatio = absLogLik / total;
   }
 
   // Map ratio to hue: more prior influence -> more red, more likelihood -> more blue
@@ -100,17 +106,3 @@ export const R_COLOR = 'hsl(25, 85%, 58%)';    // Red-ish orange
 export const KL_COLOR_HEX = '#45a085';  // Blue-ish sage green
 export const R_COLOR_HEX = '#e87040';   // Red-ish orange
 
-/**
- * Text colors that contrast well with backgrounds
- */
-export const TEXT_LIGHT = '#ffffff';
-export const TEXT_DARK = '#1a1a1a';
-
-/**
- * Choose text color based on background lightness
- * @param {number} lightness - HSL lightness value
- * @returns {string} - Text color
- */
-export function textColorForLightness(lightness) {
-  return lightness > 55 ? TEXT_DARK : TEXT_LIGHT;
-}

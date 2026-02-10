@@ -78,10 +78,6 @@
   let unit = $derived(logBase === 2 ? 'bits' : 'nats');
   let posteriorUndefined = $derived(posterior === null);
 
-  // Y-axis max for prior and posterior (shared for comparison)
-  let priorYMax = $state(null);
-  let posteriorYMax = $state(null);
-
   // Resample control points to a new count, preserving shape via interpolation
   function resampleControlPoints(oldYs, newN) {
     const oldN = oldYs.length;
@@ -151,6 +147,7 @@
     bind:likParams
     bind:priorFreeEdit
     bind:likFreeEdit
+    bind:likControlYs
     bind:numControlPoints
     bind:logBase
     onApplyPriorPreset={applyPriorPreset}
@@ -160,21 +157,20 @@
 
   <div class="charts-container">
     <CurveChart
-      title="Prior"
-      titleTex={String.raw`\text{Prior density } f_Z(z)`}
+      title="Prior density"
+      titleTex={String.raw`f_Z(z)`}
       bind:controlPointYs={priorControlYs}
       gridValues={priorNormalized}
       {gridX}
       editable={true}
       colorFn={priorColor}
       {domain}
-      bind:yMax={priorYMax}
       onchange={onPriorEdit}
     />
 
     <CurveChart
       title="Likelihood"
-      titleTex={String.raw`\text{Likelihood } \operatorname{lik}_u(z) \coloneqq p(u \mid z)`}
+      titleTex={String.raw`\operatorname{lik}_u(z) \coloneqq p(u \mid z)`}
       bind:controlPointYs={likControlYs}
       gridValues={likGrid}
       {gridX}
@@ -194,15 +190,14 @@
       </div>
     {:else}
       <CurveChart
-        title="Posterior"
-        titleTex={String.raw`\text{Posterior density } f_{Z|u}(z)`}
+        title="Posterior density"
+        titleTex={String.raw`f_{Z|u}(z)`}
         controlPointYs={[]}
         gridValues={posterior}
         {gridX}
         editable={false}
         colorFn={(v) => posteriorColor(v, 0.5, 0.5)}
         {domain}
-        bind:yMax={posteriorYMax}
       />
     {/if}
   </div>
@@ -298,12 +293,20 @@
   }
 
   .charts-container {
-    display: flex;
-    gap: 1rem;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    grid-template-rows: auto 1fr;
+    gap: 0 1rem;
+  }
+
+  .charts-container > :global(*) {
+    display: grid;
+    grid-row: span 2;
+    grid-template-rows: subgrid;
+    min-width: 0;
   }
 
   .chart-placeholder {
-    flex: 1;
     min-width: 0;
   }
 
@@ -424,7 +427,13 @@
 
   @media (max-width: 768px) {
     .charts-container {
-      flex-direction: column;
+      grid-template-columns: 1fr;
+      gap: 0.5rem;
+    }
+
+    .charts-container > :global(*) {
+      grid-row: auto;
+      display: block;
     }
   }
 </style>

@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <!-- Prior (red) bell curve -->
+  <path d="M4 28 Q4 8 10 8 Q16 8 16 28" fill="hsl(0,65%,62%)" opacity="0.7"/>
+  <!-- Posterior (purple) bell curve, shifted -->
+  <path d="M16 28 Q16 6 22 6 Q28 6 28 28" fill="hsl(280,55%,55%)" opacity="0.7"/>
+</svg>
